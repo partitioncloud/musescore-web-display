@@ -1,31 +1,35 @@
 """
 Export a MuseScore file to needed .wd/* files
 """
-import os
-import shutil
-import sys
+from typing import List, Tuple
 import subprocess
+import tempfile
+import shutil
 import json
+import sys
+import os
 import re
 
-VERBOSE=True
 
 MSCORE="mscore"
 if "MSCORE" in os.environ:
     MSCORE = os.environ["MSCORE"]
 
 
-def mscore(*args):
+def mscore(*args) -> str:
     """Wrapper to issue MuseScore commands"""
     return subprocess.check_output(
         [MSCORE]+list(map(str, args)),
         stderr=subprocess.DEVNULL
     ).decode("utf-8")
 
-def get_mscore_version():
+def get_mscore_version() -> Tuple[int, int, int]:
     """Get MuseScore version (to differentiate between v3 and v4)"""
     p = re.compile(r"MuseScore(3|4) \1\.([0-9]*)\.([0-9]*)")
     regex_result = p.search(mscore("--version"))
+
+    if regex_result is None:
+        raise EnvironmentError("MuseScore not found or unknown version")
     return (
         int(regex_result.group(1)),
         int(regex_result.group(2)),
@@ -33,62 +37,99 @@ def get_mscore_version():
     )
 
 
-def log(*args, **kwargs):
-    if VERBOSE:
-        print(*args, **kwargs)
+def generate_metadata(source_file, dest) -> None:
+    """
+    Generate score metadata, measures and segments positions
+    """
+    mscore_version = get_mscore_version()
+
+    meta_dest = os.path.join(dest, "meta.metajson")
+    if mscore_version[0] == 3:
+        mscore("--export-to", meta_dest, source_file)
+    else:
+        with open(meta_dest, 'w', encoding="utf8") as f:
+            f.write(mscore("--score-meta", source_file))
+
+    mscore("--export-to", os.path.join(dest, "measures.mpos"), source_file)
+    mscore("--export-to", os.path.join(dest, "segments.spos"), source_file)
 
 
-if len(sys.argv) < 2:
-    print(f"Usage: {sys.argv[0]} <score-file>", file=sys.stderr)
-    sys.exit(1)
+def generate_svg_graphics(source_file, dest) -> List[str]:
+    """
+    Generate svg from score
+    """
+    mscore("--export-to", os.path.join(dest, "graphic.svg"), source_file)
 
-filename = sys.argv[1]
 
-if filename[-5:] != ".mscz":
-    print("Score file must have .mscz extension.", file=sys.stderr)
-    sys.exit(1)
+    regex = re.compile(r"graphic-[0-9]*\.svg")
+    return [file for file in os.listdir(dest) if regex.match(file)]
 
-if os.path.isdir(filename) or not os.path.exists(filename):
-    print("Cannot find file " + filename, file=sys.stderr)
-    sys.exit(1)
 
-dst_dir_name = "data/"+os.path.basename(filename) + ".wd/"
+def generate_audio(source_file, dest) -> List[str]:
+    """
+    Generate audio from score
+    """
+    with tempfile.NamedTemporaryFile('w', delete_on_close=False, suffix=".json") as fp:
+        json.dump([
+            {
+                "in": source_file,
+                "out": [
+                    os.path.join(dest, "audio.ogg"),
+                    [os.path.join(dest, "audio-"), ".ogg"]
+                ]
+            }
+        ], fp)
+        fp.close()
 
-if os.path.exists(dst_dir_name):
-    if os.path.isfile(dst_dir_name):
+        mscore("--job", fp.name)
+
+    regex = re.compile(r"audio(-.*|)\.ogg")
+    return [file for file in os.listdir(dest) if regex.match(file)]
+
+
+
+def export_wd(source_file, output, verbose=False):
+    """
+    Create all the needed files
+    """
+    log = print if verbose else lambda *_1, **_2: None
+
+    if os.path.isdir(source_file) or not os.path.exists(source_file):
+        raise FileNotFoundError(f"Cannot find file {source_file}")
+
+    if os.path.isfile(output):
+        raise ValueError(f"{output} is an existing file")
+
+    os.makedirs(output, exist_ok=True)
+
+    log("- Generating metadata")
+    generate_metadata(source_file, output)
+
+    log("- Generating SVG graphics")
+    generate_svg_graphics(source_file, output)
+
+    log("- Generating OGG audio")
+    generate_audio(source_file, output)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print(
+            f"Usage: {sys.argv[0]} <score-file> [output:defaults to data/score-file.wd]",
+            file=sys.stderr
+        )
         sys.exit(1)
-    shutil.rmtree(dst_dir_name)
 
-os.makedirs(dst_dir_name, exist_ok=True)
+    filename = sys.argv[1]
+    output_dir = "data/"+filename + ".wd/"
+    if len(sys.argv) > 2:
+        output_dir = sys.argv[2]
 
-mscore_version = get_mscore_version()
+    if not filename[-5:].endswith(".mscz"):
+        print("Score file must have .mscz extension.", file=sys.stderr)
+        sys.exit(1)
 
-log("- Generating metadata")
-if mscore_version[0] == 3:
-    mscore("--export-to", dst_dir_name + "meta.metajson", filename)
-else:
-    with open(os.path.join(dst_dir_name, "meta.metajson"), 'w', encoding="utf8") as f:
-        f.write(mscore("--score-meta", filename))
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
 
-log("- Generating SVG graphics")
-mscore("--export-to", dst_dir_name + "graphic.svg", filename)
-
-log("- Generating OGG audio")
-with open(os.path.join(dst_dir_name, "audio-jobs.json"), 'w', encoding="utf8") as f:
-    json.dump([
-        {
-            "in": filename,
-            "out": [
-                dst_dir_name + "audio.ogg",
-                [ dst_dir_name + "audio-", ".ogg" ]
-            ]
-        }
-    ], f)
-mscore("--job", dst_dir_name + "audio-jobs.json")
-os.unlink(dst_dir_name + "audio-jobs.json")
-
-log("- Generating measure positions")
-mscore("--export-to", dst_dir_name + "measures.mpos", filename)
-
-log("- Generating segment positions")
-mscore("--export-to", dst_dir_name + "segments.spos", filename)
+    export_wd(sys.argv[1], output_dir, verbose=True)
