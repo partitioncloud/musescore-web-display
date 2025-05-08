@@ -10,6 +10,8 @@ import sys
 import os
 import re
 
+import music21
+
 
 MSCORE="mscore"
 if "MSCORE" in os.environ:
@@ -35,6 +37,59 @@ def get_mscore_version() -> Tuple[int, int, int]:
         int(regex_result.group(2)),
         int(regex_result.group(3))
     )
+
+
+def generate_separated_midi(source_file, output_folder):
+    """
+    From MuseScore v3, a batch job does not generate parts files, this is a workaround
+    see https://github.com/musescore/MuseScore/issues/27383
+    """
+    def get_elements(stream, classe):
+        elements = []
+        for el in stream[classe]:
+            offset = el.activeSite.getOffsetBySite(stream.parts[0]) + el.getOffsetBySite(el.activeSite)
+            elements.append((offset, el))
+        return elements
+
+
+    def add_elements(stream, elements):
+        st_elements = [(offset, el.number) for (offset, el) in get_elements(stream, 'MetronomeMark')]
+        #print(st_elements)
+        for offset, el in elements:
+            if (offset, el.number) not in st_elements:
+                stream.insert(offset, el)
+                #print(f"Inserting {el}@{offset}")
+
+        return stream
+
+    # Generate midi file
+    mscore(source_file, "-o", os.path.join(output_folder, "score.mid"))
+
+    # Load MIDI file
+    stream = music21.converter.parse(
+        os.path.join(output_folder, "score.mid")
+    )
+    outputs = []
+
+    elements = get_elements(stream, 'MetronomeMark')
+
+    # Extract each part (music21.instrument) and create a separate MIDI file for each
+    for i, part in enumerate(stream.parts):
+        part.makeRests(fillGaps=True, inPlace=True)
+        part.makeMeasures(inPlace=True)
+        part.makeTies(inPlace=True)
+
+        # Create a new music21.stream for each part
+        instrument_stream = music21.stream.Score()
+        instrument_stream.append(part)
+
+        instrument_stream = add_elements(instrument_stream, elements)
+
+        # Create a new MIDI file for each music21.instrument
+        output_path = f"{output_folder}/instrument_{i + 1}.mid"
+        instrument_stream.write('midi', fp=output_path)
+        outputs.append(output_path)
+    return outputs
 
 
 def generate_metadata(source_file, dest) -> None:
@@ -69,19 +124,34 @@ def generate_audio(source_file, dest) -> List[str]:
     """
     Generate audio from score
     """
+    mscore_version = get_mscore_version()
+
+    if mscore_version[0] == 3:
+        job_config = [{
+            "in": source_file,
+            "out": [
+                os.path.join(dest, "audio.ogg"),
+                [os.path.join(dest, "audio-"), ".ogg"]
+            ]
+        }]
+    else:
+        tmp_dir = tempfile.TemporaryDirectory()
+        job_config = [{
+            "in": source_file,
+            "out": [os.path.join(dest, "audio.ogg")]
+        }] + [{
+            "in": file,
+            "out": [os.path.join(dest, os.path.basename(file)+".ogg")]
+        } for file in generate_separated_midi(source_file, tmp_dir.name)]
+
     with tempfile.NamedTemporaryFile('w', delete_on_close=False, suffix=".json") as fp:
-        json.dump([
-            {
-                "in": source_file,
-                "out": [
-                    os.path.join(dest, "audio.ogg"),
-                    [os.path.join(dest, "audio-"), ".ogg"]
-                ]
-            }
-        ], fp)
+        json.dump(job_config, fp)
         fp.close()
 
         mscore("--job", fp.name)
+
+    if mscore_version[0] == 4:
+        tmp_dir.cleanup()
 
     regex = re.compile(r"audio(-.*|)\.ogg")
     return [file for file in os.listdir(dest) if regex.match(file)]
@@ -121,7 +191,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     filename = sys.argv[1]
-    output_dir = "data/"+filename + ".wd/"
+    output_dir = os.path.join("data", os.path.basename(filename)+".wd/")
     if len(sys.argv) > 2:
         output_dir = sys.argv[2]
 
