@@ -19,7 +19,7 @@ def mscore(*args):
     """Wrapper to issue MuseScore commands"""
     return subprocess.check_output(
         [MSCORE]+list(map(str, args)),
-        stderr=subprocess.STDOUT
+        stderr=subprocess.DEVNULL
     ).decode("utf-8")
 
 def get_mscore_version():
@@ -62,7 +62,6 @@ if os.path.exists(dst_dir_name):
 os.makedirs(dst_dir_name, exist_ok=True)
 
 mscore_version = get_mscore_version()
-print(mscore_version)
 
 log("- Generating metadata")
 if mscore_version[0] == 3:
