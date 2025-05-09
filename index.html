@@ -32,7 +32,10 @@
     <script>
       Vue.createApp({
         components: { ScoreDisplay },
-        template: `<ScoreDisplay src="./data/Proud Of You.mscz.wd/" canPlay hasAltTrack versionCode="8" />`
+        template: `<ScoreDisplay src="./data/Proud Of You.mscz.wd/" :tracks="[
+          { name: 'Piano', src: './data/Proud Of You.mscz.wd/audio.ogg' },
+          { name: 'Alt.', src: './data/Proud Of You.mscz.wd/audio-alt.ogg' }
+        ]"/>`
       }).mount('#score-display-1')
     </script>  <!-- 3: Manual mount -->
 
@@ -42,7 +45,9 @@
     <script>
       Vue.createApp({
         components: { ScoreDisplay },
-        template: `<ScoreDisplay src="./data/虫儿飞-听写-v4.mscz.wd/" canPlay />`
+        template: `<ScoreDisplay src="./data/虫儿飞-听写-v4.mscz.wd/" :tracks="[
+          { name: 'Main', src: './data/虫儿飞-听写-v4.mscz.wd/audio.ogg' },
+        ]" />`
       }).mount('#score-display-2')
     </script>  <!-- 3: Manual mount -->
 

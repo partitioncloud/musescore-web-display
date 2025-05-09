@@ -41,7 +41,7 @@ def get_mscore_version() -> Tuple[int, int, int]:
 
 def generate_separated_midi(source_file, output_folder):
     """
-    From MuseScore v3, a batch job does not generate parts files, this is a workaround
+    From MuseScore v4, a batch job does not generate parts files, this is a workaround
     see https://github.com/musescore/MuseScore/issues/27383
     """
     def get_elements(stream, classe):
@@ -72,7 +72,8 @@ def generate_separated_midi(source_file, output_folder):
     outputs = []
 
     elements = get_elements(stream, 'MetronomeMark')
-
+    # TODO : modify instruments for piano
+    # TODO : why is volume so bad ?
     # Extract each part (music21.instrument) and create a separate MIDI file for each
     for i, part in enumerate(stream.parts):
         part.makeRests(fillGaps=True, inPlace=True)
