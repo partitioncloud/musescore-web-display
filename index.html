@@ -17,7 +17,7 @@
   <link rel= "stylesheet" href= "https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css" >
 
   <script src="https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js"></script>  <!-- 1: Libraries -->
-  <script src="https://unpkg.com/vue@3.4.31/dist/vue.global.js"></script>  <!-- 1: Libraries -->
+  <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.js"></script>  <!-- 1: Libraries -->
   <link rel="stylesheet" href="./score-display/score-display.css" />
   <script src="./score-display/score-display.global.js"></script>  <!-- 2: Component script -->
 </head>
@@ -27,29 +27,17 @@
     <p>A simple showcase for MuseScore scores.</p>
 
     <p>The score below is created with MuseScore 3.6.2.</p>
-    
-    <div id="score-display-1" class="score-display-wrapper"></div>
-    <script>
-      Vue.createApp({
-        components: { ScoreDisplay },
-        template: `<ScoreDisplay src="./data/Proud Of You.mscz.wd/" :tracks="[
-          { name: 'Piano', src: './data/Proud Of You.mscz.wd/audio.ogg' },
-          { name: 'Alt.', src: './data/Proud Of You.mscz.wd/audio-alt.ogg' }
-        ]"/>`
-      }).mount('#score-display-1')
-    </script>  <!-- 3: Manual mount -->
+
+    <score-display id="score-display-1" src="./data/Proud Of You.mscz.wd">
+      <score-track src="./data/Proud Of You.mscz.wd/audio.ogg">Piano</score-track>
+      <score-track src="./data/Proud Of You.mscz.wd/audio-alt.ogg">Alt.</score-track>
+    </score-display>
 
     <p>The score below is exported with MuseScore 4.4.2 without transparent background enabled.</p>
 
-    <div id="score-display-2" class="score-display-wrapper"></div>
-    <script>
-      Vue.createApp({
-        components: { ScoreDisplay },
-        template: `<ScoreDisplay src="./data/虫儿飞-听写-v4.mscz.wd/" :tracks="[
-          { name: 'Main', src: './data/虫儿飞-听写-v4.mscz.wd/audio.ogg' },
-        ]" />`
-      }).mount('#score-display-2')
-    </script>  <!-- 3: Manual mount -->
+    <score-display id="score-display-2" src="./data/虫儿飞-听写-v4.mscz.wd/">
+      <score-track src="./data/虫儿飞-听写-v4.mscz.wd/audio.ogg">Main</score-track>
+    </score-display>
 
     <p>&nbsp;</p>
   </div>

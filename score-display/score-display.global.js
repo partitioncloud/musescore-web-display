@@ -516,7 +516,8 @@
    * The interactive score display.
    *
    * Spec:
-   * - `tracks`: array { name, src } of the tracks to display
+   * - `tracks`: array { name, src } of the tracks to display,
+   *     these can also be passed via <score-track> DOM elements
    * - The `src` should point to a directory, with or without a trailing slash.
    * - The directory should include:
    *   - `meta.metajson`, the score metadata.
@@ -526,9 +527,24 @@
   const ScoreDisplay = {
     props: {
       src: { type: String, required: true },
-      tracks: { type: Array, required: true }
+      tracks: { type: Array, required: false, default: () => [] }
     },
     setup(props) {
+      const tracks_ref = Vue.ref(props.tracks || []);
+
+      Vue.onMounted(() => {
+        const host = Vue.getCurrentInstance().proxy.$el.parentNode;
+          requestAnimationFrame(() => { // DOM is not ready yet
+          if (!props.tracks.length) {
+            const trackElements = host.getElementsByTagName("score-track");
+            tracks_ref.value = Array.from(trackElements).map(el => ({
+              name: el.textContent.trim(),
+              src: el.getAttribute('src')
+            }))
+          }
+        })
+      })
+
       const refMain = Vue.ref(null)
 
       const scoreSrc = Vue.ref('')
@@ -682,7 +698,7 @@
 
       return {
         refMain, scoreMeta, loaded, errored, graphics, mposText, audioTime,
-        refAudioApi, selectTimes, playPause, addProgress, refPagesApi, handleExactKey
+        refAudioApi, selectTimes, playPause, addProgress, refPagesApi, handleExactKey, tracks_ref
       }
     },
     components: { PagesDisplay, ScorePlayback },
@@ -706,8 +722,8 @@
           :refPagesApi="refPagesApi"
         />
         <ScorePlayback
-          v-if="tracks.length > 0"
-          :tracks="tracks"
+          v-if="tracks_ref.length"
+          :tracks="tracks_ref"
           @timeChange="val => audioTime = val"
           @focusMain="refMain && refMain.focus({preventScroll: true})"
           :refAudioApi="refAudioApi"
@@ -716,6 +732,13 @@
     `
   }
 
-  Object.assign(window, { ScoreDisplay })
+  class TrackElement extends HTMLElement {
+    /* Stores `src` and `name` data for its score-display parent */
+    connectedCallback() { this.style.display = 'none'; }
+  }
+  
+  customElements.define('score-track', TrackElement);
+  customElements.define('score-display', Vue.defineCustomElement(ScoreDisplay, {shadowRoot: false}));
 
+  Object.assign(window, { ScoreDisplay })
 })()
