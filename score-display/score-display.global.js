@@ -1,4 +1,15 @@
-(() => {
+import "https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js";
+import * as Vue from 'https://unpkg.com/vue@3.5.13/dist/vue.esm-browser.js'
+
+
+function loadStylesheet(href) {
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = href
+  document.head.appendChild(link)
+}
+
+loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css");
 
   //==============================================
 
@@ -534,7 +545,7 @@
 
       Vue.onMounted(() => {
         const host = Vue.getCurrentInstance().proxy.$el.parentNode;
-          requestAnimationFrame(() => { // DOM is not ready yet
+        requestAnimationFrame(() => { // DOM is not ready yet
           if (!props.tracks.length) {
             const trackElements = host.getElementsByTagName("score-track");
             tracks_ref.value = Array.from(trackElements).map(el => ({
@@ -728,6 +739,7 @@
           @focusMain="refMain && refMain.focus({preventScroll: true})"
           :refAudioApi="refAudioApi"
         />
+        <slot></slot>
       </div>
     `
   }
@@ -736,9 +748,7 @@
     /* Stores `src` and `name` data for its score-display parent */
     connectedCallback() { this.style.display = 'none'; }
   }
-  
   customElements.define('score-track', TrackElement);
   customElements.define('score-display', Vue.defineCustomElement(ScoreDisplay, {shadowRoot: false}));
 
   Object.assign(window, { ScoreDisplay })
-})()
