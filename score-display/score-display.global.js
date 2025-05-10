@@ -147,7 +147,8 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
       pageFormat: [null, Object],
       mposText: [null, String],
       audioTime: [null, Number],
-      refPagesApi: [null, Object]
+      refPagesApi: [null, Object],
+      downloads: [null, Array]
     },
     setup(props, ctx) {
       if (props.refPagesApi) props.refPagesApi.value = { toggleAutoScroll, toggleZoomed }
@@ -321,6 +322,14 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
           class="slcwd-button"
         >
           <i class="las la-search-plus"></i> <span class="label"><span style="text-decoration:underline">Z</span>oom</span>
+        </button>
+        <button
+          v-for="download in downloads"
+          class="slcwd-button"
+        >
+          <a :href="download.href" download>
+            <i class="las la-file-download"></i> <span class="label">{{ download.name }}</span>
+          </a>
         </button>
       </div>
     `
@@ -542,6 +551,7 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
     },
     setup(props) {
       const tracks_ref = Vue.ref(props.tracks || []);
+      const downloads = Vue.ref([]);
 
       Vue.onMounted(() => {
         const host = Vue.getCurrentInstance().proxy.$el.parentNode;
@@ -553,6 +563,11 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
               src: el.getAttribute('src')
             }))
           }
+          const downloadElements = host.getElementsByTagName("score-download");
+          downloads.value = Array.from(downloadElements).map(el => ({
+            name: el.textContent.trim(),
+            href: el.getAttribute('href')
+          }))
         })
       })
 
@@ -709,7 +724,7 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
 
       return {
         refMain, scoreMeta, loaded, errored, graphics, mposText, audioTime,
-        refAudioApi, selectTimes, playPause, addProgress, refPagesApi, handleExactKey, tracks_ref
+        refAudioApi, selectTimes, playPause, addProgress, refPagesApi, handleExactKey, tracks_ref, downloads
       }
     },
     components: { PagesDisplay, ScorePlayback },
@@ -726,6 +741,7 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
         <PagesDisplay
           :loaded="loaded" :errored="errored"
           :pages="graphics"
+          :downloads="downloads"
           :pageFormat="scoreMeta ? scoreMeta.pageFormat : null"
           :mposText="mposText"
           :audioTime="audioTime"
@@ -748,7 +764,10 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
     /* Stores `src` and `name` data for its score-display parent */
     connectedCallback() { this.style.display = 'none'; }
   }
+  class DownloadElement extends HTMLElement { // We might want to use a Vue component ?
+    /* Stores `href` and `name` data for its score-display parent */
+    connectedCallback() { this.style.display = 'none'; }
+  }
   customElements.define('score-track', TrackElement);
+  customElements.define('score-download', DownloadElement);
   customElements.define('score-display', Vue.defineCustomElement(ScoreDisplay, {shadowRoot: false}));
-
-  Object.assign(window, { ScoreDisplay })

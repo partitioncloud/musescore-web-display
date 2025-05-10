@@ -10,15 +10,20 @@
   color: #111;
   background: #fff;
 }
-.slcwd-button > .la,
-.slcwd-button > .las,
-.slcwd-button > .lar,
-.slcwd-button > .lab {
+.slcwd-button a {
+  color: unset;
+  text-decoration: unset;
+}
+
+.slcwd-button .la,
+.slcwd-button .las,
+.slcwd-button .lar,
+.slcwd-button .lab {
   font-size: 24px;
   display: inline-block;
   vertical-align: middle;
 }
-.slcwd-button > .label {
+.slcwd-button .label {
   display: inline-block;
   vertical-align: middle;
 }
