@@ -3,13 +3,23 @@ import * as Vue from "https://unpkg.com/vue@3.5.13/dist/vue.esm-browser.js";
 // Howler: audio library
 import "https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js";
 
-// Magenta: midi library
-import "https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.js" // Dependency
-import "https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1/es6/core.js";
-
-const mm = window.core; // MagentaMusic's core (mm) gets loaded into window.core
+// Magenta: midi library, loaded dynamically if needed by `ensure_magenta`
+let mm;
 
 
+/** Returns a promise that fulfills once magenta and Tone.js are loaded */
+function ensure_magenta() {
+  if (mm !== undefined) return Promise.resolve();
+
+  // Tone.js needs to be synchronously loaded before magenta
+  return import("https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.js").then(() =>
+  import("https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1/es6/core.js")).then(() => {
+    mm = window.core; // MagentaMusic's core (mm) gets loaded into window.core
+    return Promise.resolve();
+  });
+}
+
+/** Simply load a stylesheet */
 function loadStylesheet(href) {
   const link = document.createElement('link')
   link.rel = 'stylesheet'
@@ -19,8 +29,10 @@ function loadStylesheet(href) {
 
 loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css");
 
-const DEFAULT_SOUNDFONT = "https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus";
 
+//==============================================
+
+const DEFAULT_SOUNDFONT = "https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus";
 
 /** Wrapper of a MagentaJS player to have the same interface as howler's Howl */
 class MidiPlayer {
@@ -40,7 +52,9 @@ class MidiPlayer {
     this.data = null;
     this.currentTime = 0;
 
-    this.load_data(options.onload, options.onend);
+    ensure_magenta().then(() =>
+      this.load_data(options.onload, options.onend)
+    );
   }
 
   load_data(onload, onend) {
