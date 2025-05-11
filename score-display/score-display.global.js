@@ -1,5 +1,13 @@
+import * as Vue from "https://unpkg.com/vue@3.5.13/dist/vue.esm-browser.js";
+
+// Howler: audio library
 import "https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js";
-import * as Vue from 'https://unpkg.com/vue@3.5.13/dist/vue.esm-browser.js'
+
+// Magenta: midi library
+import "https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.js" // Dependency
+import "https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1/es6/core.js";
+
+const mm = window.core; // MagentaMusic's core (mm) gets loaded into window.core
 
 
 function loadStylesheet(href) {
@@ -10,6 +18,93 @@ function loadStylesheet(href) {
 }
 
 loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css");
+
+const DEFAULT_SOUNDFONT = "https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus";
+
+
+/** Wrapper of a MagentaJS player to have the same interface as howler's Howl */
+class MidiPlayer {
+  /**
+   * @param {*} options 
+   * - `src`, array of a single element: url of the file to load
+   * - `onload` callback to execute once the player is ready
+   * - `onend` callback to execute once the file is over
+   * - Optional `soundfont` url of the soundfont to use
+   */
+  constructor(options = {}) {
+    this.src = options.src.at(0); // We are expecting only one URL, but use this to be coherent with Howler
+    this.soundfont = options.soundfont || DEFAULT_SOUNDFONT;
+
+    this.next_seek = null; // Time to seek to the next time the player starts/is resumed
+    this.player = null;
+    this.data = null;
+    this.currentTime = 0;
+
+    this.load_data(options.onload, options.onend);
+  }
+
+  load_data(onload, onend) {
+    fetch(this.src)
+    .then((response) => response.blob())
+    .then((blob) => mm.blobToNoteSequence(blob))
+    .then((s) => {
+      this.seq = s; // Used later in this.play()
+      this.player = new mm.SoundFontPlayer(
+        this.soundfont,
+        undefined,
+        undefined,
+        undefined,{
+          run: (note) => this.currentTime = note.startTime,
+          stop: onend
+      });
+      this.player.loadSamples(this.seq)
+      .then(onload);
+    });
+  }
+
+  playing() {
+    return this.player && (this.player.getPlayState() == "started");
+  }
+
+  play() {
+    let recover_seek = () => {
+      if (this.next_seek !== null) {
+        this.player.seekTo(this.next_seek);
+        this.next_seek = null;
+      }
+    }
+
+    if (this.player.getPlayState() === 'paused') {
+      this.player.resume();
+      recover_seek()
+    } else {
+      this.player.start(this.seq, undefined, this.next_seek ?? 0);
+      this.next_seek = null;
+    }
+  }
+
+  pause() {
+    if (!this.playing()) return console.warn("Player already paused");
+    this.player.pause();
+  }
+
+  duration() { return this.seq.totalTime; }
+
+  seek(time) {
+    if (typeof time === 'number') {
+      if (! this.playing()) {
+        // As we can only seek while playing, we save that in next_seek
+        // which is later used by this.play() when resuming
+        this.currentTime = time;
+        this.next_seek = time;
+        return;
+      }
+      return this.player.seekTo(time);
+    }
+    return this.currentTime;
+  }
+}
+
 
   //==============================================
 
@@ -339,7 +434,7 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
 
   const ScorePlayback = {
     props: {
-      tracks: Array, // [{ name, src }]
+      tracks: Array, // [{ name, src, type:("midi" or null), soundfont (for midi) }]
       refAudioApi: [null, Object],
     },
     emits: ['timeChange', 'focusMain'],
@@ -374,7 +469,7 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
             seek_val = old_audio.seek();
           }
 
-          const self = new Howl({
+          const options = {
             src: [currentTrack.value.src],
             preload: 'metadata',
             onload: () => {
@@ -386,9 +481,16 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
               // Ensure behavior consistency with web audio
               self.pause()
               self.seek(self.duration())
-            }
-          })
-          return self
+            },
+            soundfont: currentTrack.value.soundfont
+          }
+          let Constructor = Howl;
+          if (currentTrack.value.type == "midi") {
+            Constructor = MidiPlayer;
+          }
+
+          const self = new Constructor(options);
+          return self;
       })
 
       const progressbar = Vue.ref(null)
@@ -536,7 +638,7 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
    * The interactive score display.
    *
    * Spec:
-   * - `tracks`: array { name, src } of the tracks to display,
+   * - `tracks`: array { name, src, type, soundfont } of the tracks to display,
    *     these can also be passed via <score-track> DOM elements
    * - The `src` should point to a directory, with or without a trailing slash.
    * - The directory should include:
@@ -560,7 +662,9 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
             const trackElements = host.getElementsByTagName("score-track");
             tracks_ref.value = Array.from(trackElements).map(el => ({
               name: el.textContent.trim(),
-              src: el.getAttribute('src')
+              src: el.getAttribute('src'),
+              type: el.getAttribute('type') ?? null,
+              soundfont: el.getAttribute('sound-font') ?? null
             }))
           }
           const downloadElements = host.getElementsByTagName("score-download");
