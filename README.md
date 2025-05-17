@@ -8,7 +8,7 @@
 
 This is a simple and elegant component allowing you create an interactive showcase of your score, similar to the score showcase seen on musescore.com. [See a working demo here](https://sparkslab.art/dictations/dict-proud-of-you/).
 
-This library uses [Vue](https://vuejs.org/), [Howler](https://github.com/goldfire/howler.js) and the [Line Awesome icon font](https://icons8.com/line-awesome). It is deliberately made into a global and buildless library for easy integration with site builders like WordPress.
+This library uses [Vue](https://vuejs.org/), [Howler](https://github.com/goldfire/howler.js), the [Line Awesome icon font](https://icons8.com/line-awesome) and [webmscore](https://github.com/LibreScore/webmscore). It is deliberately made into a global and buildless library for easy integration with site builders like WordPress.
 
 ## Features
 
@@ -17,7 +17,7 @@ This library uses [Vue](https://vuejs.org/), [Howler](https://github.com/goldfir
 - Zoom: give a closer look to the score.
 - Audio playback, with a cursor highlighting the current measure (auto-scroll included).
 - Keyboard shortcuts.
-- Optional two-track setup: The user can quickly switch between the regular version and the no-vocal version of exported audio during playback if you provide them.
+- Add as many tracks as needed, midi and audio are supported
 
 ## Running
 
@@ -29,22 +29,28 @@ Note that it won't work if you open `index.html` directly in your file explorer.
 
 ### The Component
 
-The main library is `score-display/score-display.global.js`, which exposes a global variable `ScoreDisplay`. It can be used as a Vue component.
+The main library is `score-display/score-display.global.js`, which exposes a new HTML component: `<score-display>`.
 
-| Property | Explanation |
-| - | - |
-| `src` | `string` \| URL to the directory containing the files of your score |
-| `versionCode` | `string?` \| Can be any string, appears in query param while fetching files |
-| `canPlay` | `boolean?` \| Whether to load audio `audio.ogg` and offer playback |
-| `hasAltTrack` | `boolean?` \| Whether to offer the no-vocal audio `audio-alt.ogg` |
+You have two options to embed a score:
+1. export all files using the [python script](./py-script/wd_export.py), and serve these files directly to the client
+2. serve directly the MuseScore (mscz) file, the client will convert it on his machine.  
+   This will be a bit heavier for the client (~20MB), [exclude very old browsers](https://github.com/LibreScore/webmscore?tab=readme-ov-file#browser-support), [may need a bit of setup to get all fonts working](https://github.com/LibreScore/webmscore?tab=readme-ov-file#load-extra-fonts) but could simplify your backend
+
+#### Serving from exported directory
+
+Your component will look like that:
+```html
+<score-display src="/your/score/data/path.mscz.wd" type="wd-data">
+  <!-- Continue reading this file to see how to add audio & download buttons -->
+</score-display>
+```
+
 
 The directory that `src` points to should contain the following files [(example here)](./data/Proud%20Of%20You.mscz.wd/):
 
 ```plain
 Score Directory
 ├─ meta.metajson     Score metadata
-├─ audio.ogg         (optional) Exported audio
-├─ audio-alt.ogg     (optional) No-vocal version of exported audio
 ├─ graphic-1.svg     SVG graphic of score pages, one for each page.
 ├─ graphic-....svg
 ├─ graphic-8.svg
@@ -53,40 +59,39 @@ Score Directory
 
 They can all be exported from MuseScore using the [command line interface](https://musescore.org/en/handbook/3/command-line-options).
 
-See also [the python scripts](./py-script/) that automatically exports all files. The scripts exports the audio for ALL part scores in the form of `audio-%s.ogg` by default, so you may add a part score called `alt` to automatically generate `audio-alt.ogg`.
+See also [the python scripts](./py-script/) that automatically exports all files. The scripts exports the audio for ALL part scores in the form of `audio-%s.ogg` by default.
+
+#### Serving from MuseScore file without exporting
+
+Your component will look like that:
+```html
+<score-display src="/your/score/data/path.mscz" type="mscz">
+  <!-- Continue reading this file to see how to add audio & download buttons -->
+</score-display>
+```
+
+Unfortunately, [recent MuseScore files are not supported yet by the main branch of webmscore](https://github.com/LibreScore/webmscore/pull/15), you should download artifacts from [here](https://github.com/CarlGao4/webmscore/actions/runs/14575709935) and serve them from your server (look at the first lines of [score-display.global.js](./score-display/score-display.global.js))
+
 
 ### Integrating into existing HTML
 
-In particular, you need to add the following into your website:
+Dependencies will be loaded when needed by the script, here is how to integrate it:
 
-1. Dependencies: Line Awesome icon pack, Vue (global edition) and Howler (global edition).
-
-```html
-<link rel= "stylesheet" href= "https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css" >
-<script src="https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js"></script>
-<script src="https://unpkg.com/vue@3.4.31/dist/vue.global.js"></script>
-```
-
-2. This library.
+1. Add this library.
 
 ```html
 <link rel="stylesheet" href="./score-display/score-display.css" />
-<script src="./score-display/score-display.global.js"></script>
+<script type="module" src="./score-display/score-display.global.js"></script>
 ```
 
-3. A container element for your score showcase.
+2. A container element for your score showcase (needs to be after the `<script>` tag)
 
 ```html
-<div id="score-display-1" class="score-display-wrapper"></div>
-```
+<score-display src="..." type="...">
+  <score-track src=".../audio.ogg">Piano</score-track><!-- Add audio track -->
+  <score-track src=".../audio.mid">Piano [mid]</score-track><!-- Add midi track as well! -->
 
-4. Mounting script.
-
-```html
-<script>
-  Vue.createApp({
-    components: { ScoreDisplay },
-    template: `<ScoreDisplay src="./data/Proud Of You.mscz.wd/" canPlay hasAltTrack versionCode="5" />`
-  }).mount('#score-display-1')
-</script>
+  <score-download href=".../my score.mscz">Download Mscz</score-download><!-- And download buttons! -->
+  <score-download href=".../my score.pdf">Download Pdf</score-download>
+</score-display>
 ```
