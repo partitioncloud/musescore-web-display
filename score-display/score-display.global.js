@@ -3,8 +3,19 @@ import * as Vue from "https://unpkg.com/vue@3.5.13/dist/vue.esm-browser.js";
 // Howler: audio library
 import "https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js";
 
+const LIB_TONE_JS = "https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.js";
+const LIB_MAGENTA_CORE = "https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1/es6/core.js"
+
+// See https://github.com/LibreScore/webmscore/pull/15 : no support for recent Mscore files
+// Download artifacts from https://github.com/CarlGao4/webmscore/actions/runs/14575709935 from now,
+// and serve them from /webmscore
+// CDN link (with old version) https://cdn.jsdelivr.net/npm/webmscore/webmscore.mjs
+const LIB_WEBMSCORE = "/webmscore/webmscore.mjs";
+
+
 // Magenta: midi library, loaded dynamically if needed by `ensure_magenta`
 let mm;
+let WebMscore;
 
 
 /** Returns a promise that fulfills once magenta and Tone.js are loaded */
@@ -12,8 +23,8 @@ function ensure_magenta() {
   if (mm !== undefined) return Promise.resolve();
 
   // Tone.js needs to be synchronously loaded before magenta
-  return import("https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.js").then(() =>
-  import("https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1/es6/core.js")).then(() => {
+  return import(LIB_TONE_JS).then(() =>
+  import(LIB_MAGENTA_CORE)).then(() => {
     mm = window.core; // MagentaMusic's core (mm) gets loaded into window.core
     return Promise.resolve();
   });
@@ -119,6 +130,148 @@ class MidiPlayer {
   }
 }
 
+// Load data from an .mscz.wd url
+class WdDataLoader {
+
+  constructor (src) {
+    this.src = src;
+  }
+
+  async loadMetaData() {
+    const response = await fetch(this.src + '/meta.metajson');
+    return await response.json();
+  }
+
+  /** Load measures positions, set savePositions=true to load each note event position */
+  async loadPos(savePositions) {
+    if (savePositions) { console.warn("Attempting to load positions with savePositions=true for a wd-data score")}
+
+    const response = await fetch(this.src + '/measures.mpos');
+    const mposXml = new DOMParser().parseFromString(await response.text() ?? '<none />', 'application/xml'); // What happens if not found ?
+
+    const event_items = mposXml.querySelectorAll('event')
+    const events = []
+    for (let i = 0; i < event_items.length; i++) {
+      const item = event_items[i]
+      events.push({
+        elid: Number(item.getAttribute('elid')),
+        time: item.getAttribute('position') / 1000
+      })
+    }
+
+    const posScale = 12
+    const element_items = mposXml.querySelectorAll('element')
+    const elements = {}
+    for (let i = 0; i < element_items.length; i++) {
+      const item = element_items[i]
+      const element = {
+        elid: item.getAttribute('id'),
+        pos: [item.getAttribute('x') / posScale, item.getAttribute('y') / posScale],
+        size: [item.getAttribute('sx') / posScale, item.getAttribute('sy') / posScale],
+        page: +item.getAttribute('page')
+      }
+      const minWidth = 64
+      if (element.size[0] < minWidth) {
+        // element.pos[0] -= (minWidth - element.size[0]) / 2
+        element.size[0] = minWidth
+      }
+      elements[item.getAttribute('id')] = element
+    }
+
+    return {
+      "events": events,
+      "elements": elements
+    }
+  }
+
+  async _loadPage(pageId) {
+    const url = this.src + `/graphic-${pageId+1}.svg`;
+    const response = await fetch(url);
+    return await response.text();
+  }
+
+  async loadGraphics(count) {
+    let graphics = Array(count).fill(null);
+    
+    for (let i = 0; i < graphics.length; i++) {
+      graphics[i] = await this._loadPage(i); // TODO: load only 3 at a time ?
+    }
+
+    return graphics;
+  }
+
+}
+
+// Load data from a MuseScore file, with webmscore
+class MsczLoader {
+
+  constructor (src) {
+    this.src = src;
+
+    this.score = this.load_score();
+  }
+
+  async load_score() {
+    const module = await import(LIB_WEBMSCORE);
+    WebMscore = module.default;
+
+    return Promise.all([
+      fetch(this.src).then((data) => data.arrayBuffer()),
+      WebMscore.ready
+    ]).then(([msczdata, _]) =>
+      WebMscore.load('mscz', new Uint8Array(msczdata))
+    );
+  }
+
+  async loadMetaData() {
+    let score = await this.score;
+    return await score.metadata()
+  }
+
+  /** Load measures positions, set savePositions=true to load each note event position */
+  async loadPos(savePositions) {
+    let score = await this.score;
+    let posRaw = await score.savePositions(savePositions);
+
+    let json_data = JSON.parse(posRaw);
+
+    // TODO: if el.sx==0, recover width from next element if possible
+    const minWidth = 64;
+    let element_transform = (el) => ({
+      elid: el.id,
+      pos: [el.x, el.y],
+      size: [Math.max(el.sx, minWidth), el.sy],
+      page: +el.page
+    })
+
+    let event_transform = (evt) => ({
+      elid: evt.elid,
+      time: evt.position / 1000
+    })
+
+    const events = [];
+    json_data.events.forEach((e) => {
+      events[e.elid] = event_transform(e);
+    });
+    return {
+      elements: json_data.elements.map(element_transform),
+      events: events
+    }
+  }
+
+  async loadGraphics(count) {
+    let score = await this.score;
+
+    let graphics = Array(count).fill(null);
+    
+    for (let i = 0; i < graphics.length; i++) {
+      graphics[i] = await score.saveSvg(i, false);
+    }
+
+    return graphics;
+  }
+}
+
 
   //==============================================
 
@@ -146,7 +299,7 @@ class MidiPlayer {
       id: Number,
       page: [null, Boolean, String],
       pageFormat: Object,
-      highlighterElid: [null, String],
+      highlighterElid: [null, Number],
       elementsDict: Object,
     },
     setup(props, ctx) {
@@ -243,7 +396,7 @@ class MidiPlayer {
    *
    * Spec:
    * - The `pages` is an Array made of either `null` (unloaded), `false` (loading) or string (loaded).
-   * - The `mposText` is the XML text file defining the positions of measures.
+   * - The `positions` is the json Object defining the positions of measures or note events.
    * - The `current` is the current playback time, in seconds.
    * - `@select` emits with all the matching timestamps in seconds when the user clicks on a measure.
    */
@@ -254,7 +407,7 @@ class MidiPlayer {
       errored: Boolean,
       pages: [null, Array],
       pageFormat: [null, Object],
-      mposText: [null, String],
+      positions: [null, Object],
       audioTime: [null, Number],
       refPagesApi: [null, Object],
       downloads: [null, Array]
@@ -283,46 +436,10 @@ class MidiPlayer {
         }
       })
 
-      const mposXml = Vue.computed(() => {
-        const vdoc = new DOMParser().parseFromString(props.mposText ?? '<none />', 'application/xml')
-        return vdoc
-      })
-      const events = Vue.computed(() => {
-        const items = mposXml.value.querySelectorAll('event')
-        const ret = []
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i]
-          ret.push({
-            elid: item.getAttribute('elid'),
-            time: item.getAttribute('position') / 1000
-          })
-        }
-        return ret
-      })
-      const elements = Vue.computed(() => {
-        const posScale = 12
-        const items = mposXml.value.querySelectorAll('element')
-        const ret = {}
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i]
-          const element = {
-            elid: item.getAttribute('id'),
-            pos: [item.getAttribute('x') / posScale, item.getAttribute('y') / posScale],
-            size: [item.getAttribute('sx') / posScale, item.getAttribute('sy') / posScale],
-            page: +item.getAttribute('page')
-          }
-          const minWidth = 64
-          if (element.size[0] < minWidth) {
-            // element.pos[0] -= (minWidth - element.size[0]) / 2
-            element.size[0] = minWidth
-          }
-          ret[item.getAttribute('id')] = element
-        }
-        return ret
-      })
       const highlighterIndex = { current: 0 }
       const highlighterElid = Vue.computed(() => {
-        const eventList = events.value
+        const eventList = props.positions.events;
+
         if (props.audioTime == null || eventList.length == 0) {
           return null
         }
@@ -354,7 +471,7 @@ class MidiPlayer {
         if (!enableAutoScroll.value) return
         if (!innerRef.value) return
         if (highlighterElid.value == null) return
-        const element = elements.value[highlighterElid.value]
+        const element = props.positions.elements[highlighterElid.value]
         if (!element) return
         const parent = innerRef.value
         const page = parent.children[element.page]
@@ -384,7 +501,7 @@ class MidiPlayer {
 
       function selectElement(elid) {
         const ret = []
-        for (let event of events.value) {
+        for (let event of props.positions.events) {
           if (event.elid == elid) {
             ret.push(event.time)
           }
@@ -392,7 +509,7 @@ class MidiPlayer {
         ctx.emit('select', ret)
       }
 
-      return { ref, innerRef, enableAutoScroll, zoomed, highlighterElid, elements, selectElement, toggleAutoScroll, toggleZoomed }
+      return { ref, innerRef, enableAutoScroll, zoomed, highlighterElid, selectElement, toggleAutoScroll, toggleZoomed }
     },
     components: {
       Page
@@ -412,7 +529,7 @@ class MidiPlayer {
             :page="page"
             :pageFormat="pageFormat"
             :highlighterElid="highlighterElid"
-            :elementsDict="elements"
+            :elementsDict="positions.elements"
             @select="elid => selectElement(elid)"
           />
         </div>
@@ -654,16 +771,19 @@ class MidiPlayer {
    * Spec:
    * - `tracks`: array { name, src, type, soundfont } of the tracks to display,
    *     these can also be passed via <score-track> DOM elements
-   * - The `src` should point to a directory, with or without a trailing slash.
+   * - `type`: mscz | wd-data
+   * - If type is wd-data, `src` should point to a directory, with or without a trailing slash.
    * - The directory should include:
    *   - `meta.metajson`, the score metadata.
    *   - `graphic-%d.svg`, the SVG of all pages.
    *   - Optionally `measures.mpos`, the measure position references.
+   * - If type is mscz, `src` points to the score file
    */
   const ScoreDisplay = {
     props: {
       src: { type: String, required: true },
-      tracks: { type: Array, required: false, default: () => [] }
+      tracks: { type: Array, required: false, default: () => [] },
+      type: { type: String, required: false, default: "wd-data" }
     },
     setup(props) {
       const tracks_ref = Vue.ref(props.tracks || []);
@@ -701,10 +821,12 @@ class MidiPlayer {
       const errored = Vue.ref(false)
       const graphics = Vue.ref(null)
 
-      const mposText = Vue.ref(null)
+      const positions = Vue.ref({elements: [], events: []});
 
       const audioTime = Vue.ref(null)  // current audio time
       const refAudioApi = Vue.reactive({ value: null })
+      const loader = Vue.ref(null);
+
       function selectTimes(times) {
         if (!refAudioApi.value || times.length == 0) {
           return
@@ -742,7 +864,7 @@ class MidiPlayer {
         }
       }
 
-      // Load metadata and mpos
+      // Load score data
       Vue.watchEffect(() => {
         if(scoreSrc.value == props.src) {
           return
@@ -753,95 +875,48 @@ class MidiPlayer {
         scoreMeta.value = null
         loadToken.value = Math.random()
         graphics.value = null
-        mposText.value = null
+        positions.value = {elements: [], events: []};
         errored.value = false
 
-          // Initiate metadata load
-          ; (async (token) => {
-            const response = await fetch(scoreSrc.value + '/meta.metajson')
-            try {
-              const meta = await response.json()
-              if (token == loadToken.value) {
-                if (!('pages' in meta) && ('metadata' in meta)) {
-                  scoreMeta.value = meta.metadata
-                } else {
-                  scoreMeta.value = meta
-                }
+        let token = loadToken.value; // Use that to see if the data is still relevant once received
+        
+        if (props.type == "mscz") {
+          loader.value = new MsczLoader(scoreSrc.value);
+        } else {
+          loader.value = new WdDataLoader(scoreSrc.value);
+        }
 
-                // Load pages
-                graphics.value = Array(scoreMeta.value.pages).fill(null)
-              }
-            } catch (_err) {
-              console.warn('meta.metajson load failed.', _err)
-              errored.value = true
-            }
-          })(loadToken.value)
+        // Initiate metadata load
+        loader.value.loadMetaData().then((meta) => {
+          if (token != loadToken.value) return;
+          if (!('pages' in meta) && ('metadata' in meta)) {
+            scoreMeta.value = meta.metadata
+          } else {
+            scoreMeta.value = meta
+          }
+          // Load pages
+          graphics.value = Array(scoreMeta.value.pages).fill(null); // It is bad that we don't get images as soon as they are loaded
+          loader.value.loadGraphics(scoreMeta.value.pages)
+          .then((gr) => {
+            if (token != loadToken.value) return;
+            graphics.value = gr;
+          })
+          .catch((_err) => {console.warn('loading images failed.', _err); errored.value = true });
+        }).catch((_err) => {
+          console.warn('metadata load failed.', _err);
+          errored.value = true;
+        });
 
-          // Initiate mpos load
-          ; (async (token) => {
-            const response = await fetch(scoreSrc.value + '/measures.mpos')
-            try {
-              const mpos = await response.text()
-              if (token == loadToken.value) {
-                mposText.value = mpos
-              }
-            } catch (_err) {
-              console.warn('measures.mpos load failed.', _err)
-            }
-          })(loadToken.value)
+        // Initiate positions load
+        loader.value.loadPos(false).then((positions_json) => {
+          if (token != loadToken.value) return;
+          positions.value = positions_json;
+        }).catch((_err) => console.warn('events positions load failed.', _err));
       })
 
-      // Try to load graphic
-      function tryLoadGraphic(pageId) {
-        if (graphics.value[pageId] != null) {
-          return
-        }
-        ; (async (token) => {
-          graphics.value[pageId] = false
-          const url = scoreSrc.value + '/graphic-' + (pageId + 1) + '.svg'
-          const response = await fetch(url)
-          try {
-            const text = await response.text()
-            if (token != loadToken.value) {
-              return
-            }
-            graphics.value[pageId] = text
-          } catch (_err) {
-            console.warn('Graphic load failed.', _err)
-            setTimeout(() => {
-              if (token != loadToken.value) {
-                return
-              }
-              graphics.value[pageId] = null
-            }, 1000)
-          }
-        })(loadToken.value)
-      }
-
-      // Check for graphics to load
-      Vue.watchEffect(() => {
-        if (!loaded.value) {
-          return
-        }
-        let loadingCount = 0
-        for (let item in graphics.value) {
-          if (item == false) {
-            loadingCount += 1
-          }
-        }
-        for (let i = 0; i < graphics.value.length; i++) {
-          if (loadingCount >= 3) {
-            break
-          }
-          if (graphics.value[i] == null) {
-            loadingCount += 1
-            tryLoadGraphic(i)
-          }
-        }
-      })
 
       return {
-        refMain, scoreMeta, loaded, errored, graphics, mposText, audioTime,
+        refMain, scoreMeta, loaded, errored, graphics, positions, audioTime,
         refAudioApi, selectTimes, playPause, addProgress, refPagesApi, handleExactKey, tracks_ref, downloads
       }
     },
@@ -861,7 +936,7 @@ class MidiPlayer {
           :pages="graphics"
           :downloads="downloads"
           :pageFormat="scoreMeta ? scoreMeta.pageFormat : null"
-          :mposText="mposText"
+          :positions="positions"
           :audioTime="audioTime"
           @select="times => selectTimes(times)"
           :refPagesApi="refPagesApi"
