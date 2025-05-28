@@ -1145,7 +1145,7 @@ class MsczLoader {
         });
 
         // Initiate positions load
-        loader.value.loadPos(true).then((positions_json) => {
+        loader.value.loadPos(false).then((positions_json) => {
           if (token != loadToken.value) return;
           positions.value = positions_json;
         }).catch((_err) => console.warn('events positions load failed.', _err));
