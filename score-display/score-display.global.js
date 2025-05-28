@@ -13,21 +13,30 @@ const LIB_MAGENTA_CORE = "https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1/es
 const LIB_WEBMSCORE = "/webmscore/webmscore.mjs";
 
 
-// Magenta: midi library, loaded dynamically if needed by `ensure_magenta`
-let mm;
-let WebMscore;
 
-
+let mm; // Magenta: midi library
 /** Returns a promise that fulfills once magenta and Tone.js are loaded */
 function ensure_magenta() {
   if (mm !== undefined) return Promise.resolve();
 
   // Tone.js needs to be synchronously loaded before magenta
   return import(LIB_TONE_JS).then(() =>
-  import(LIB_MAGENTA_CORE)).then(() => {
-    mm = window.core; // MagentaMusic's core (mm) gets loaded into window.core
-    return Promise.resolve();
-  });
+    import(LIB_MAGENTA_CORE)).then(() => {
+      mm = window.core; // MagentaMusic's core (mm) gets loaded into window.core
+      return Promise.resolve();
+    });
+  }
+
+let WebMscore;
+async function ensure_webmscore() {
+  if (WebMscore !== undefined) {
+    return await WebMscore.ready;
+  };
+
+  const module = await import(LIB_WEBMSCORE);
+  WebMscore = module.default;
+
+  await WebMscore.ready;
 }
 
 /** Simply load a stylesheet */
@@ -48,7 +57,7 @@ const DEFAULT_SOUNDFONT = "https://storage.googleapis.com/magentadata/js/soundfo
 /** Wrapper of a MagentaJS player to have the same interface as howler's Howl */
 class MidiPlayer {
   /**
-   * @param {*} options 
+   * @param {*} options
    * - `src`, array of a single element: url of the file to load
    * - `onload` callback to execute once the player is ready
    * - `onend` callback to execute once the file is over
@@ -130,6 +139,181 @@ class MidiPlayer {
   }
 }
 
+
+class MsczPlayer {
+  /**
+   * @param {*} options
+   * - `src`, array of a single element: url of the file to load
+   * - `onload` callback to execute once the player is ready
+   * - `onend` callback to execute once the file is over
+   * - Optional `soundfont` url of the soundfont to use
+   */
+  constructor(options = {}) {
+    this.onend = options.onend;
+
+    this._duration = 0; // To be loaded
+    this.next_seek = null; // Time to seek to on the next play() call
+    this.is_playing = false;
+    this.synth_complete = false; // are all frames synthesized ?
+    this.synth_running = false;
+    this.stopSynth = async () => {}
+
+    this.CHANNELS = 2
+    this.FRAME_LENGTH = 512;
+    this.BUFFER_QUEUE = [];
+
+    this.audioCtx = new (AudioContext || webkitAudioContext)();
+    this.currentFrame = 0; // ~ currentTime
+
+    this.mscz = new MsczLoader(
+      options.src.at(0),
+      {soundfont: options.soundfont || DEFAULT_SOUNDFONT}
+    );
+    this.load_data(options.onload);
+  }
+
+  async load_data(onload) {
+    let score = await this.mscz.score;
+    let metadata = await score.metadata();
+    await this.mscz.setSoundFont();
+
+    this._duration = metadata.duration;
+
+    onload();
+  }
+
+  setupProcessor() {
+    const processor = this.audioCtx.createScriptProcessor(
+      this.FRAME_LENGTH,
+      0,
+      this.CHANNELS
+    );
+    this.currentFrame = 0;
+
+    // At each frame, we retrieve a piece of synthesized audio from BUFFER_QUEUE
+    processor.onaudioprocess = (e) => {
+      if (this.BUFFER_QUEUE.length === 0) {
+        // There is nothing left in the queue
+        for (let c = 0; c < this.CHANNELS; c++) {
+          e.outputBuffer.getChannelData(c).fill(0);
+        }
+        if (this.synth_complete && this.is_playing) {
+          // There is nothing in the queue and everything is already synthesized
+          this.onend()
+        }
+        return;
+      }
+
+      const chunk = this.BUFFER_QUEUE.shift();
+      for (let c = 0; c < this.CHANNELS; c++) {
+        const channel = e.outputBuffer.getChannelData(c);
+        channel.set(chunk[c]);
+      }
+      this.currentFrame += 1;
+    };
+
+    processor.connect(this.audioCtx.destination);
+    this.processor = processor;
+  }
+
+
+  async synthAudioToQueue(start = 0) {
+    let score = await this.mscz.score;
+    const fn = await score.synthAudio(start);
+    this.stopSynth = (async () => await fn(false));
+    this.synth_running = true;
+
+    this.BUFFER_QUEUE = [];
+    for (;;) {
+      const res = await fn();
+      const frames = new Float32Array(res.chunk.buffer);
+
+      // Extract per-channel buffers
+      const chunk = {};
+      for (let c = 0; c < this.CHANNELS; c++) {
+        chunk[c] = frames.subarray(
+          c * this.FRAME_LENGTH,
+          (c + 1) * this.FRAME_LENGTH
+        );
+      }
+      this.BUFFER_QUEUE.push(chunk);
+
+      if (res.done) {
+        this.synth_complete = true
+        break;
+      }
+    }
+
+    this.synth_running = false;
+  }
+
+
+  async play() {
+    if (!this.processor) {
+      this.setupProcessor();
+    }
+
+    if (this.next_seek !== null || ! this.synth_running) {
+      // duration might be unknown when seek(.) is called
+      await this.mscz.score;
+      const start_time = Math.min(this.next_seek, this.duration()) ?? 0;
+
+      this.currentFrame = start_time*this.audioCtx.sampleRate/this.FRAME_LENGTH;
+      this.synthAudioToQueue(start_time); // synth in the background
+
+      this.next_seek = null;
+    }
+
+    this.is_playing = true;
+
+    if (this.audioCtx.state === "suspended") {
+      await this.audioCtx.resume();
+    }
+  }
+
+  pause() {
+    this.is_playing = false;
+    this.audioCtx.suspend();
+  }
+
+  playing() {
+    return this.is_playing;
+  }
+
+  duration() {
+    // The last sustain is always a bit longer than the said duration
+    return this._duration+2;
+  }
+
+  seek(time) {
+    // if time is undefined, returns the current seek
+    // else, seeks to the specified time
+    if (time === undefined) {
+      if (!this.is_playing && this.next_seek !== null)
+        return this.next_seek;
+
+      return Math.min(this.currentFrame*this.FRAME_LENGTH / this.audioCtx.sampleRate, this.duration());
+    }
+
+    // We want to start ON the selected note, so we seek a bit earlier
+    time = Math.max(time-0.01, 0);
+    (async () => {
+      // We clear the current buffer queue
+      await this.stopSynth();
+      this.stopSynth = async () => {};
+
+      this.synth_complete = false // we don't want onend to be called
+      this.BUFFER_QUEUE = [];
+
+      this.next_seek = time;
+
+      if (this.is_playing)
+        this.play(); // Re-start synthesizing
+    })()
+  }
+}
+
+
 // Load data from an .mscz.wd url
 class WdDataLoader {
 
@@ -192,7 +376,7 @@ class WdDataLoader {
 
   async loadGraphics(count) {
     let graphics = Array(count).fill(null);
-    
+
     for (let i = 0; i < graphics.length; i++) {
       graphics[i] = await this._loadPage(i); // TODO: load only 3 at a time ?
     }
@@ -204,7 +388,6 @@ class WdDataLoader {
 
 // Load data from a MuseScore file, with webmscore
 class MsczLoader {
-
   constructor (src) {
     this.src = src;
 
@@ -212,13 +395,11 @@ class MsczLoader {
   }
 
   async load_score() {
-    const module = await import(LIB_WEBMSCORE);
-    WebMscore = module.default;
+    await ensure_webmscore();
 
-    return Promise.all([
-      fetch(this.src).then((data) => data.arrayBuffer()),
-      WebMscore.ready
-    ]).then(([msczdata, _]) =>
+    return fetch(this.src)
+    .then((data) => data.arrayBuffer())
+    .then((msczdata) =>
       WebMscore.load('mscz', new Uint8Array(msczdata))
     );
   }
@@ -235,14 +416,25 @@ class MsczLoader {
 
     let json_data = JSON.parse(posRaw);
 
-    // TODO: if el.sx==0, recover width from next element if possible
     const minWidth = 64;
-    let element_transform = (el) => ({
-      elid: el.id,
-      pos: [el.x, el.y],
-      size: [Math.max(el.sx, minWidth), el.sy],
-      page: +el.page
-    })
+    let element_transform = ((el, index, elements) => {
+      let width = el.sx;
+
+      // If sx is 0, try to recover from the next element
+      if (width === 0 && elements && index < elements.length - 1) {
+        const next = elements[index + 1];
+        if (next && next.x > el.x && next.y == el.y) {
+          width = next.x - el.x;
+        }
+      }
+
+      return {
+        elid: el.id,
+        pos: [el.x, el.y],
+        size: [Math.max(width, minWidth), el.sy],
+        page: +el.page
+      }
+    });
 
     let event_transform = (evt) => ({
       elid: evt.elid,
@@ -263,12 +455,31 @@ class MsczLoader {
     let score = await this.score;
 
     let graphics = Array(count).fill(null);
-    
+
     for (let i = 0; i < graphics.length; i++) {
       graphics[i] = await score.saveSvg(i, false);
     }
 
     return graphics;
+  }
+
+  async setSoundFont() {
+    let score = await this.score;
+
+    const soundFontData = new Uint8Array(
+      await (
+        await fetch('https://cdn.jsdelivr.net/gh/musescore/MuseScore@2.1/share/sound/FluidR3Mono_GM.sf3')
+        // TODO: get soundfont URL from options, compare this one with Magenta default one for default
+      ).arrayBuffer()
+    )
+    await score.setSoundFont(soundFontData);
+  }
+
+  async synthAudio(start_time) {
+    let score = await this.score;
+    await this.setSoundFont();
+
+    return await score.synthAudio(start_time);
   }
 }
 
@@ -565,7 +776,7 @@ class MsczLoader {
 
   const ScorePlayback = {
     props: {
-      tracks: Array, // [{ name, src, type:("midi" or null), soundfont (for midi) }]
+      tracks: Array, // [{ name, src, type:("midi", "audio" or "mscz/..."), soundfont (for midi) }]
       refAudioApi: [null, Object],
     },
     emits: ['timeChange', 'focusMain'],
@@ -589,7 +800,9 @@ class MsczLoader {
       const loaded = Vue.ref(false);
       const audio = Vue.computed((old_audio) => {
           loaded.value = false
-          
+
+          const thisIndex = currentTrackIndex.value;
+
           let playing = false;
           let seek_val = 0;
           if (old_audio !== undefined) {
@@ -606,7 +819,8 @@ class MsczLoader {
             onload: () => {
               loaded.value = true
               self.seek(seek_val);
-              if (playing) self.play();
+              if (playing  && thisIndex === currentTrackIndex.value) // make sure that we have not changed track during loading
+                self.play();
             },
             onend: () => {
               // Ensure behavior consistency with web audio
@@ -615,9 +829,20 @@ class MsczLoader {
             },
             soundfont: currentTrack.value.soundfont
           }
-          let Constructor = Howl;
-          if (currentTrack.value.type == "midi") {
-            Constructor = MidiPlayer;
+          let Constructor;
+          switch (currentTrack.value.type) {
+            case "audio":
+              Constructor = Howl;
+              break;
+            case "midi":
+              Constructor = MidiPlayer;
+              break;
+            case "mscz/all":
+              Constructor = MsczPlayer;
+              break;
+            default:
+              console.error(`Unknown track type ${currentTrack.value.type}`);
+              return;
           }
 
           const self = new Constructor(options);
@@ -644,7 +869,7 @@ class MsczLoader {
 
         if(!audio.value) return
         if(!loaded.value) return  // Only update state when loaded
-        
+
         isPlaying.value = audio.value.playing()
         if(audio.value.duration() != 0)
           progressRatio.value = audio.value.seek() / audio.value.duration();
@@ -717,7 +942,9 @@ class MsczLoader {
         document.addEventListener('mouseup', cleanup)
       }
 
-      const trackNamesTooltip = props.tracks.map(t => t.name).join('\n');
+      const trackNamesTooltip = Vue.computed(() =>
+        props.tracks.map(t => t.name).join('\n')
+      );
 
       return {
         loaded, audio, progressbar, playPause, stop, isPlaying,
@@ -794,12 +1021,22 @@ class MsczLoader {
         requestAnimationFrame(() => { // DOM is not ready yet
           if (!props.tracks.length) {
             const trackElements = host.getElementsByTagName("score-track");
-            tracks_ref.value = Array.from(trackElements).map(el => ({
+            const trackItems = Array.from(trackElements).map(el => ({
               name: el.textContent.trim(),
-              src: el.getAttribute('src'),
-              type: el.getAttribute('type') ?? null,
+              src: el.getAttribute('src') ?? null,
+              type: el.getAttribute('type') ?? "audio",
               soundfont: el.getAttribute('sound-font') ?? null
-            }))
+            }));
+            tracks_ref.value = trackItems.map((track) => {
+              if (!track.type.startsWith("mscz/")) return track;
+
+              if (!track.src && props.type != "mscz") {// We have no mscz source file
+                console.error("Could not load trackElement, no mscz given", track);
+                return;
+              }
+              track.src = track.src ?? props.src;
+              return track;
+            })
           }
           const downloadElements = host.getElementsByTagName("score-download");
           downloads.value = Array.from(downloadElements).map(el => ({
@@ -879,7 +1116,7 @@ class MsczLoader {
         errored.value = false
 
         let token = loadToken.value; // Use that to see if the data is still relevant once received
-        
+
         if (props.type == "mscz") {
           loader.value = new MsczLoader(scoreSrc.value);
         } else {
@@ -908,7 +1145,7 @@ class MsczLoader {
         });
 
         // Initiate positions load
-        loader.value.loadPos(false).then((positions_json) => {
+        loader.value.loadPos(true).then((positions_json) => {
           if (token != loadToken.value) return;
           positions.value = positions_json;
         }).catch((_err) => console.warn('events positions load failed.', _err));

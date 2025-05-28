@@ -17,7 +17,7 @@ This library uses [Vue](https://vuejs.org/), [Howler](https://github.com/goldfir
 - Zoom: give a closer look to the score.
 - Audio playback, with a cursor highlighting the current measure (auto-scroll included).
 - Keyboard shortcuts.
-- Add as many tracks as needed, midi and audio are supported
+- Add as many tracks as needed, midi, audio and mscz-generated [are supported](#integrating-into-existing-html)
 
 ## Running
 
@@ -88,8 +88,10 @@ Dependencies will be loaded when needed by the script, here is how to integrate 
 
 ```html
 <score-display src="..." type="...">
-  <score-track src=".../audio.ogg">Piano</score-track><!-- Add audio track -->
-  <score-track src=".../audio.mid">Piano [mid]</score-track><!-- Add midi track as well! -->
+  <score-track src=".../audio.ogg" type="audio">Piano</score-track><!-- Add audio track -->
+  <score-track src=".../audio.mid" type="midi">Piano [mid]</score-track><!-- Add midi track as well! -->
+
+  <score-track src=".../score.mscz" type="mscz/all">All instruments [from mscz]</score-track><!-- Add track from mscz, `src` being optional if the whole score is mscz -->
 
   <score-download href=".../my score.mscz">Download Mscz</score-download><!-- And download buttons! -->
   <score-download href=".../my score.pdf">Download Pdf</score-download>
