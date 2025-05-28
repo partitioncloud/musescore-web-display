@@ -146,6 +146,7 @@ class MsczPlayer {
    * - `src`, array of a single element: url of the file to load
    * - `onload` callback to execute once the player is ready
    * - `onend` callback to execute once the file is over
+   * - Optional `mscz` object (will replace `src`)
    * - Optional `soundfont` url of the soundfont to use
    */
   constructor(options = {}) {
@@ -165,7 +166,7 @@ class MsczPlayer {
     this.audioCtx = new (AudioContext || webkitAudioContext)();
     this.currentFrame = 0; // ~ currentTime
 
-    this.mscz = new MsczLoader(
+    this.mscz = options.mscz || new MsczLoader(
       options.src.at(0),
       {soundfont: options.soundfont || DEFAULT_SOUNDFONT}
     );
@@ -838,6 +839,7 @@ class MsczLoader {
               Constructor = MidiPlayer;
               break;
             case "mscz/all":
+              options.mscz = currentTrack.value.mscz;
               Constructor = MsczPlayer;
               break;
             default:
@@ -1034,10 +1036,14 @@ class MsczLoader {
                 console.error("Could not load trackElement, no mscz given", track);
                 return;
               }
+              if (!track.src && loader.value != null) {
+                track.mscz = loader.value; // Just give it the already built mscz loader
+              }
               track.src = track.src ?? props.src;
               return track;
             })
           }
+
           const downloadElements = host.getElementsByTagName("score-download");
           downloads.value = Array.from(downloadElements).map(el => ({
             name: el.textContent.trim(),
@@ -1052,9 +1058,8 @@ class MsczLoader {
       const loadToken = Vue.ref(null)
 
       const scoreMeta = Vue.ref(null)
-      const loaded = Vue.computed(() => {
-        return scoreMeta.value != null
-      })
+      const loaded = Vue.computed(() => scoreMeta.value != null)
+
       const errored = Vue.ref(false)
       const graphics = Vue.ref(null)
 
