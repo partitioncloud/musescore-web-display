@@ -4,9 +4,9 @@
 
 ![screenshot](screenshot.png)
 
-> [Buy me a coffee](https://afdian.net/a/yezhiyi9670) if you like this work.
+> You can buy [the original author](https://github.com/yezhiyi9670) [a coffee](https://afdian.net/a/yezhiyi9670) if you like this work.
 
-This is a simple and elegant component allowing you create an interactive showcase of your score, similar to the score showcase seen on musescore.com. [See a working demo here](https://sparkslab.art/dictations/dict-proud-of-you/).
+This is a simple and elegant library allowing you create an interactive showcase of your score, similar to the score showcase seen on musescore.com. [See a working demo here](https://partitioncloud.github.io/musescore-web-display/).
 
 This library uses [Vue](https://vuejs.org/), [Howler](https://github.com/goldfire/howler.js), the [Line Awesome icon font](https://icons8.com/line-awesome) and [webmscore](https://github.com/LibreScore/webmscore). It is deliberately made into a global and buildless library for easy integration with site builders like WordPress.
 

@@ -10,3 +10,10 @@
   margin-left: auto;
   margin-right: auto;
 }
+.nav-link {
+  text-decoration: none;
+}
+.octicon {
+  width: 31px;
+  transform: translateY(3px);
+}
