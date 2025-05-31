@@ -146,11 +146,13 @@ class MsczPlayer {
    * - `src`, array of a single element: url of the file to load
    * - `onload` callback to execute once the player is ready
    * - `onend` callback to execute once the file is over
+   * - `excerpt`: index of the instrument to use (-1 being "all")
    * - Optional `mscz` object (will replace `src`)
    * - Optional `soundfont` url of the soundfont to use
    */
   constructor(options = {}) {
     this.onend = options.onend;
+    this.excerpt = options.excerpt;
 
     this._duration = 0; // To be loaded
     this.next_seek = null; // Time to seek to on the next play() call
@@ -177,6 +179,10 @@ class MsczPlayer {
     let score = await this.mscz.score;
     let metadata = await score.metadata();
     await this.mscz.setSoundFont();
+    
+    await score.generateExcerpts();    
+    // TODO: the score may be used to generate graphics etc in the meantime, want to wait for this to be ready
+    await score.setExcerptId(this.excerpt);
 
     this._duration = metadata.duration;
 
@@ -838,8 +844,9 @@ class MsczLoader {
             case "midi":
               Constructor = MidiPlayer;
               break;
-            case "mscz/all":
+            case "mscz/synth":
               options.mscz = currentTrack.value.mscz;
+              options.excerpt = currentTrack.value.excerpt;
               Constructor = MsczPlayer;
               break;
             default:
@@ -1030,7 +1037,12 @@ class MsczLoader {
               soundfont: el.getAttribute('sound-font') ?? null
             }));
             tracks_ref.value = trackItems.map((track) => {
-              if (!track.type.startsWith("mscz/")) return track;
+              if (!track.type.startsWith("mscz/synth")) return track;
+
+              track.type = track.type.split(":")[0];
+
+              const trackId = track.type.split(":")[1];
+              track.excerpt = isNaN(trackId) ? -1 : Number(trackId);
 
               if (!track.src && props.type != "mscz") {// We have no mscz source file
                 console.error("Could not load trackElement, no mscz given", track);
