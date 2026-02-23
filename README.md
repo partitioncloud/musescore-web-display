@@ -1,6 +1,6 @@
 # MuseScore Web Display
 
-> **This is not an officially supported/endoresed [MuseScore](https://musescore.org/) product.**
+> **This is not an officially supported/endorsed [MuseScore](https://musescore.org/) product.**
 
 ![screenshot](screenshot.png)
 

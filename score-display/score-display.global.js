@@ -1154,6 +1154,10 @@ class MsczLoader {
           .then((gr) => {
             if (token != loadToken.value) return;
             graphics.value = gr;
+
+            // If used in an IFrame, let the parent window know that the score is visible
+            if (window.parent)
+              window.parent.postMessage("scoreDisplay:ready", "*");
           })
           .catch((_err) => {console.warn('loading images failed.', _err); errored.value = true });
         }).catch((_err) => {
