@@ -98,3 +98,16 @@ Dependencies will be loaded when needed by the script, here is how to integrate 
   <score-download href=".../my score.pdf">Download Pdf</score-download>
 </score-display>
 ```
+
+### Remove CDN calls
+
+If you need a version of this library that does not use CDNs, you can run `make no-cdn`.  
+This will create a `target` directory with all the files you need to use this library without CDNs.  
+> ⚠️ For now, you still need to download CarlGao4's webmscore manually ⚠️
+
+Then, you can replace the previous calls to this library with:
+```html
+<link rel="stylesheet" href="./[path to `target`]/score-display.css" />
+<script type="module" src="./[path to `target`]/score-display.global.js"></script>
+```
+

@@ -1,0 +1,34 @@
+1c1
+< import * as Vue from "https://unpkg.com/vue@3.5.13/dist/vue.esm-browser.js";
+---
+> import * as Vue from "./modules/vue/dist/vue.esm-browser.prod.js";
+4c4
+< import "https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js";
+---
+> import "./modules/howler/dist/howler.min.js"
+6,7c6,7
+< const LIB_TONE_JS = "https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.js";
+< const LIB_MAGENTA_CORE = "https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1/es6/core.js"
+---
+> const LIB_TONE_JS = "./modules/tone/build/Tone.js"
+> const LIB_MAGENTA_CORE = "./modules/@magenta/music/es6/core.js"
+13,14c13
+< const LIB_WEBMSCORE = "/webmscore/webmscore.mjs";
+< 
+---
+> const LIB_WEBMSCORE = "./webmscore/webmscore.mjs";
+50c49,54
+< loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css");
+---
+> function absoluteURL(relative) {
+>   let currentScriptDir = import.meta.url.substr(0, import.meta.url.lastIndexOf('/'));
+>   return currentScriptDir + "/" + relative
+> }
+> 
+> loadStylesheet(absoluteURL("modules/line-awesome/dist/line-awesome/css/line-awesome.min.css"));
+478c482,484
+<         await fetch('https://cdn.jsdelivr.net/gh/musescore/MuseScore@2.1/share/sound/FluidR3Mono_GM.sf3')
+---
+>         await fetch(
+>           absoluteURL('soundfonts/FluidR3Mono_GM.sf3')
+>         )
