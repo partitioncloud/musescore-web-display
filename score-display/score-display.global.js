@@ -12,6 +12,7 @@ const LIB_MAGENTA_CORE = "https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1/es
 // CDN link (with old version) https://cdn.jsdelivr.net/npm/webmscore/webmscore.mjs
 const LIB_WEBMSCORE = "/webmscore/webmscore.mjs";
 
+const WebMscoreSupported = ["mscz", "mscx", "musicxml", "midi"];
 
 
 let mm; // Magenta: midi library
@@ -168,7 +169,7 @@ class MsczPlayer {
     this.audioCtx = new (AudioContext || webkitAudioContext)();
     this.currentFrame = 0; // ~ currentTime
 
-    this.mscz = options.mscz || new MsczLoader(
+    this.mscz = options.mscz || new WebMscoreLoader(
       options.src.at(0),
       {soundfont: options.soundfont || DEFAULT_SOUNDFONT}
     );
@@ -393,10 +394,11 @@ class WdDataLoader {
 
 }
 
-// Load data from a MuseScore file, with webmscore
-class MsczLoader {
-  constructor (src) {
+// Load data from a MuseScore supported file, with webmscore
+class WebMscoreLoader {
+  constructor (src, type) {
     this.src = src;
+    this.type = type;
 
     this.score = this.load_score();
   }
@@ -406,9 +408,16 @@ class MsczLoader {
 
     return fetch(this.src)
     .then((data) => data.arrayBuffer())
-    .then((msczdata) =>
-      WebMscore.load('mscz', new Uint8Array(msczdata))
-    );
+    .then((filedata) =>
+      WebMscore.load(this.type, new Uint8Array(filedata))
+    )
+    .then((score) => {
+      if (this.type == "mscz") return score;
+
+      // Calling "saveSvg, savePositions, ..." directly causes a WorkerError
+      return score.saveMsc("mscz")
+      .then((msczdata) => WebMscore.load("mscz", msczdata))
+    });
   }
 
   async loadMetaData() {
@@ -1007,7 +1016,7 @@ class MsczLoader {
    * Spec:
    * - `tracks`: array { name, src, type, soundfont } of the tracks to display,
    *     these can also be passed via <score-track> DOM elements
-   * - `type`: mscz | wd-data
+   * - `type`: mscz | mscx | musicxml | midi | wd-data
    * - If type is wd-data, `src` should point to a directory, with or without a trailing slash.
    * - The directory should include:
    *   - `meta.metajson`, the score metadata.
@@ -1044,7 +1053,7 @@ class MsczLoader {
               const trackId = track.type.split(":")[1];
               track.excerpt = isNaN(trackId) ? -1 : Number(trackId);
 
-              if (!track.src && props.type != "mscz") {// We have no mscz source file
+              if (!track.src && !WebMscoreSupported.includes(props.type)) {// We have no mscz source file
                 console.error("Could not load trackElement, no mscz given", track);
                 return;
               }
@@ -1134,10 +1143,13 @@ class MsczLoader {
 
         let token = loadToken.value; // Use that to see if the data is still relevant once received
 
-        if (props.type == "mscz") {
-          loader.value = new MsczLoader(scoreSrc.value);
-        } else {
+        if (WebMscoreSupported.includes(props.type)) {
+          loader.value = new WebMscoreLoader(scoreSrc.value, props.type);
+        } else if (props.type == "wd-data") {
           loader.value = new WdDataLoader(scoreSrc.value);
+        } else {
+          console.error(`Unknown source type  "${props.type}".`);
+          errored.value = true;
         }
 
         // Initiate metadata load
