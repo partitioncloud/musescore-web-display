@@ -154,7 +154,7 @@ class MidiPlayer {
 }
 
 
-class MsczPlayer {
+class WebMscorePlayer {
   /**
    * @param {*} options
    * - `src`, array of a single element: url of the file to load
@@ -167,6 +167,7 @@ class MsczPlayer {
   constructor(options = {}) {
     this.onend = options.onend;
     this.excerpt = options.excerpt;
+    this.score_type = options.type;
 
     this._duration = 0; // To be loaded
     this.next_seek = null; // Time to seek to on the next play() call
@@ -184,6 +185,7 @@ class MsczPlayer {
 
     this.mscz = options.mscz || new WebMscoreLoader(
       options.src.at(0),
+      this.score_type,
       {soundfont: options.soundfont || DEFAULT_SOUNDFONT}
     );
     this.load_data(options.onload);
@@ -806,6 +808,7 @@ class WebMscoreLoader {
   const ScorePlayback = {
     props: {
       tracks: Array, // [{ name, src, type:("midi", "audio" or "mscz/..."), soundfont (for midi) }]
+      type: String, // file ext of the score
       refAudioApi: [null, Object],
     },
     emits: ['timeChange', 'focusMain'],
@@ -869,7 +872,8 @@ class WebMscoreLoader {
             case "mscz/synth":
               options.mscz = currentTrack.value.mscz;
               options.excerpt = currentTrack.value.excerpt;
-              Constructor = MsczPlayer;
+              options.type = props.type;
+              Constructor = WebMscorePlayer;
               break;
             default:
               console.error(`Unknown track type ${currentTrack.value.type}`);
@@ -1227,6 +1231,7 @@ class WebMscoreLoader {
         <ScorePlayback
           v-if="tracks_ref.length"
           :tracks="tracks_ref"
+          :type="type"
           @timeChange="val => audioTime = val"
           @focusMain="refMain && refMain.focus({preventScroll: true})"
           :refAudioApi="refAudioApi"
