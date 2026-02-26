@@ -12,7 +12,20 @@ const LIB_MAGENTA_CORE = "https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1/es
 // CDN link (with old version) https://cdn.jsdelivr.net/npm/webmscore/webmscore.mjs
 const LIB_WEBMSCORE = "/webmscore/webmscore.mjs";
 
-const WebMscoreSupported = ["mscz", "mscx", "musicxml", "midi"];
+// From https://musescore.org/en/handbook/3/file-formats#share-with-other-software
+const WebMscoreSupported = [
+  'gp', 'gpx', 'gp5', 'gp4', 'gp3',
+  'musicxml', 'xml', 'mxl',
+  'mid', 'midi', 'kar',
+  'cap', 'capx',
+  'mgu', 'sgu',
+  'ove', 'scw',
+  'mscz',
+  'mei',
+  'ptb',
+  'bww',
+  "md",
+];
 
 
 let mm; // Magenta: midi library
