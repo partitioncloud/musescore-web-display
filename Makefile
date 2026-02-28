@@ -1,6 +1,6 @@
 no-cdn: target/soundfonts/FluidR3Mono_GM.sf3 webmscore
 	npm ci
-	mkdir -p target/{soundfonts,modules}
+	mkdir -p target/soundfonts target/modules
 	cp ./score-display/* target -r
 	cp ./node_modules/* target/modules -r
 	cp ./webmscore/ target/ -r
