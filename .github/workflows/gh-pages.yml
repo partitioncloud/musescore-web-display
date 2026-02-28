@@ -33,14 +33,12 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 22
-      - name: Download WebMscore
-        run: mkdir -p webmscore # TODO
-      - name: Download from npm & build target/
-        run: make no-cdn
+      - name: Download assets & build target/
+        run: make pages
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./
+          path: ./target
 
   # Deployment job
   deploy:

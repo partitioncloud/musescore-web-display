@@ -1,0 +1,15 @@
+diff --git a/index.html b/index.html
+index 71e0431..4b9856c 100644
+--- a/index.html
++++ b/index.html
+@@ -14,8 +14,8 @@
+     }
+   </style>
+   <link rel="stylesheet" href="./style/index.css" />
+-  <link rel="stylesheet" href="./score-display/score-display.css" />
+-  <script type="module" src="./score-display/score-display.global.js"></script>  <!-- 2: Component script -->
++  <link rel="stylesheet" href="./score-display.css" />
++  <script type="module" src="./score-display.global.js"></script>  <!-- 2: Component script -->
+ </head>
+ <body>
+   <div id="root" class="root">
