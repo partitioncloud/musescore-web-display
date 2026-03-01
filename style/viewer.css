@@ -1,0 +1,189 @@
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body,
+.root {
+  height: 100%;
+}
+
+input[type="file"] {
+  padding: 7px 20px;
+  border: none;
+  border-radius: 3px;
+  margin: 3px;
+  background-color: var(--color-blue);
+  color: var(--color-base);
+  cursor: pointer;
+}
+
+.file-area {
+  position: relative;
+  border: 2px dashed black;
+  background-color: #dfdff1;
+  transition: 1s box-shadow;
+  max-width: 500px;
+  margin: auto;
+}
+
+.file-area:hover {
+  box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+  transition: 0.2s box-shadow;
+}
+
+.file-area input[type=file] {
+  position: absolute;
+  height: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.file-area .inner-file-area {
+  padding: 30px;
+  background: var(--color-mantle);
+  border: 2px dashed var(--color-red);
+  text-align: center;
+  transition: background 0.3s ease-in-out;
+}
+
+.file-area:hover>.inner-file-area {
+  background: var(--color-surface0);
+}
+
+.file-area input[type=file]:valid+.inner-file-area {
+  border-color: var(--color-green);
+}
+
+.file-area input[type=file]:not(:required)+.inner-file-area {
+  border-color: var(--color-blue);
+}
+
+.file-area:has(~ #score-display) {
+  display: none;
+}
+
+#close-file {
+  display: none;
+  border: none;
+  cursor: pointer;
+  z-index: 2;
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: fit-content;
+  width: fit-content;
+  padding: 0px;
+}
+
+#close-file:has(~ #score-display) {
+  display: unset;
+}
+
+#close-file > .las {
+  background-color: red;
+  color: white;
+  height: 40px;
+  width: 40px;
+  line-height: 40px;
+  font-size: 25px;
+}
+
+#score-display {
+  background-color: #efefef;
+  min-height: 100vh;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.hidden {
+  display: none;
+}
+
+#restore-viewer {
+  border: 1px solid black;
+  color: white;
+  background-color: #2b66c2;
+  padding: 5px 15px;
+  margin-top: 18px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+
+#restore-viewer:hover {
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
+}
+
+#restore-viewer:active {
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 30px 60px -12px inset, rgba(0, 0, 0, 0.3) 0px 18px 36px -18px inset;
+}
+
+/* Override slcwd CSS */
+
+.slcwd-playback-progressbar-i {
+  background-color: #0098FF;
+}
+
+.slcwd-playback-progressbar {
+  height: 5px;
+  margin-top: 6px;
+  margin-right: 15px;
+}
+
+.slcwd-playback-controls {
+  margin: auto;
+  border-radius: 24px;
+  width: calc(max(75vw, 400px));
+  position: fixed;
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: rgba(0, 0, 0, 0.15) 0px 15px 25px, rgba(0, 0, 0, 0.05) 0px 5px 10px;
+}
+
+.slcwd-playback-button {
+  flex-basis: unset;
+  border-radius: 51px;
+  margin: 3px 0px;
+}
+
+.slcwd-playback-button:hover {
+  background: #0098FF !important;
+  color: white;
+}
+
+.slcwd-pause {
+  margin-left: 4px;
+}
+
+.slcwd-pages-controls {
+  position: fixed;
+  margin: auto;
+  top: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+}
+
+.slcwd-pages-controls, #close-file {
+  box-shadow: rgba(0, 0, 0, 0.1) -4px 9px 25px -6px;
+}
+
+.slcwd-pages-display {
+  margin-top: 50px;
+  margin-bottom: 12px;
+}
+
+.slcwd-pages-display-i {
+  padding: 0 25px;
+}

@@ -10,7 +10,9 @@ pages: no-cdn
 	cp -r data ./target/
 	cp -r style ./target/
 	cp index.html ./target/
+	cp viewer.html ./target/
 	patch ./target/index.html ./patches/index.html.no-cdn.diff
+	patch ./target/viewer.html ./patches/viewer.html.no-cdn.diff
 
 target/soundfonts/FluidR3Mono_GM.sf3:
 	mkdir -p target/soundfonts

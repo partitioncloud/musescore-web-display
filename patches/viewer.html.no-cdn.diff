@@ -1,0 +1,19 @@
+diff --git a/viewer.html b/viewer.html
+index 64ac528..e0c7716 100644
+--- a/viewer.html
++++ b/viewer.html
+@@ -75,11 +75,11 @@
+       document.getElementById("restore-viewer").classList.remove("hidden");
+     })
+   </script>
+-  <link rel="stylesheet" href="https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css"/>
+-  <link rel="stylesheet" href="./score-display/score-display.css" />
++  <link rel="stylesheet" href="./modules/line-awesome/dist/line-awesome/css/line-awesome.min.css"/>
++  <link rel="stylesheet" href="./score-display.css" />
+   <link rel="stylesheet" href="./style/index.css" />
+   <link rel="stylesheet" href="./style/viewer.css" />
+-  <script type="module" src="./score-display/score-display.global.js"></script>
++  <script type="module" src="./score-display.global.js"></script>
+ </head>
+ 
+ <body>
