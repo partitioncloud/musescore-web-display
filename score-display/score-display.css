@@ -10,6 +10,7 @@
   color: #111;
   background: #fff;
 }
+
 .slcwd-button a {
   color: unset;
   text-decoration: unset;
@@ -23,33 +24,42 @@
   display: inline-block;
   vertical-align: middle;
 }
+
 .slcwd-button .label {
   display: inline-block;
   vertical-align: middle;
 }
+
 .slcwd-button:disabled {
   color: #ccc;
 }
+
 .slcwd-button:hover:not([disabled]) {
   background: #eee;
 }
+
 .slcwd-button:active:not([disabled]) {
   background: #ddd;
 }
+
 .slcwd-button[selected]:not(disabled) {
   background: #111;
   color: #f9f9f9;
   border-color: transparent;
 }
+
 .slcwd-button[selected]:hover:not([disabled]) {
   background: #333;
 }
+
 .slcwd-button[selected]:active:not([disabled]) {
   background: #555;
 }
+
 .slcwd-button-group>.slcwd-button:not(:first-child) {
   border-left-width: 0;
 }
+
 .slcwd-button-group>.slcwd-button:not(:last-child) {
   border-right-width: 0;
 }
@@ -60,12 +70,14 @@
   display: flex;
   justify-content: center;
 }
+
 .slcwd-pages-display-i {
   height: 100%;
   overflow-x: auto;
   white-space: nowrap;
   display: flex;
 }
+
 .slcwd-pages-display-error {
   border: 1px solid #ccc;
   background: white;
@@ -85,14 +97,17 @@
   box-sizing: content-box;
   overflow: hidden;
 }
+
 .slcwd-page:not(:last-child) {
   margin-right: 12px;
 }
+
 .slcwd-page-placeholder {
   display: table;
   width: 100%;
   height: 100%;
 }
+
 .slcwd-page-placeholder-i {
   display: table-cell;
   vertical-align: middle;
@@ -101,6 +116,7 @@
   color: #ccc;
   user-select: none;
 }
+
 .slcwd-page-graphic {
   width: 100%;
   height: 100%;
@@ -111,7 +127,8 @@
   z-index: 1;
   position: relative;
 }
-.slcwd-pages-controls > button {
+
+.slcwd-pages-controls>button {
   padding: 0 8px;
   height: 40px;
   border: 1px solid #ccc;
@@ -124,28 +141,56 @@
   height: 40px;
   display: flex;
 }
+
 .slcwd-playback-button {
   flex-basis: 40px;
 }
+
 .slcwd-playback-progress {
   flex: 1;
   width: 0;
   padding: 12px;
 }
+
 .slcwd-playback-progressbar {
   position: relative;
   background: #eee;
   height: 100%;
 }
+
 .slcwd-playback-progressbar-l {
   position: absolute;
   background: #ddd;
   height: 100%;
   width: 100%;
 }
+
 .slcwd-playback-progressbar-i {
   position: absolute;
   background-color: #111;
   height: 100%;
   width: 0%;
+}
+
+.slcwd-playback-tooltip {
+  background-color: white;
+  box-shadow: rgba(17, 17, 26, 0.05) 0px 4px 16px, rgba(17, 17, 26, 0.05) 0px 8px 32px;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+
+  padding: 12px;
+  position: absolute;
+  transform: translateX(78px) translateY(-100%);
+
+  white-space: preserve-breaks;
+  z-index: 2;
+  display: none;
+}
+
+.slcwd-playback-tooltip:hover {
+  display: unset;
+}
+
+.slcwd-button:hover+.slcwd-playback-tooltip {
+  display: unset;
 }

@@ -1004,9 +1004,12 @@ class WebMscoreLoader {
         >
           <i class="las la-stop"></i>
         </button>
-        <button class="slcwd-button" @click="nextTrack" :title="trackNamesTooltip">
+        <button class="slcwd-button" @click="nextTrack">
           {{ currentTrack.name }}
         </button>
+        <div class="slcwd-playback-tooltip">
+          {{ trackNamesTooltip }}
+        </div>
         <div class="slcwd-playback-progress">
           <div
             ref="progressbar"

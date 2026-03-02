@@ -30,8 +30,6 @@
       document.getElementById("score-container").innerHTML += `
         <score-display id="score-display" src="data:.mscz;base64,${base64score}" type="mscz">
           <score-track type="mscz/synth:all">Tutti</score-track>
-          <score-track type="mscz/synth:all">Voix A</score-track>
-          <score-track type="mscz/synth:all">Voix B</score-track>
         </score-display>
       `;
 
@@ -110,7 +108,7 @@
       </div>
       <div style="text-align: center">
         <button id="restore-viewer" class="hidden" onclick="loadFile()">
-          Restore "<b id="restore-filename">"</b>
+          Restore "<b id="restore-filename"></b>"
         </button>
       </div>
     </div>

@@ -187,3 +187,7 @@ input[type="file"] {
 .slcwd-pages-display-i {
   padding: 0 25px;
 }
+
+.slcwd-playback-tooltip {
+  transform: translateX(65px) translateY(-100%);
+}
