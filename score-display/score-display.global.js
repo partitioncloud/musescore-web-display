@@ -189,6 +189,11 @@ class WebMscorePlayer {
       {soundfont: options.soundfont || DEFAULT_SOUNDFONT}
     );
     this.load_data(options.onload);
+    this.destroy = async () => {
+      if (options.mscz) return;
+      let score = await this.mscz.score;
+      score.destroy(false);
+    }
   }
 
   async load_data(onload) {
@@ -407,6 +412,7 @@ class WdDataLoader {
     return graphics;
   }
 
+  async destroy() {}
 }
 
 // Load data from a MuseScore supported file, with webmscore
@@ -511,6 +517,11 @@ class WebMscoreLoader {
     await this.setSoundFont();
 
     return await score.synthAudio(start_time);
+  }
+
+  async destroy() {
+    let score = await this.score;
+    score.destroy(false);
   }
 }
 
@@ -647,6 +658,7 @@ class WebMscoreLoader {
     props: {
       loaded: Boolean,
       errored: Boolean,
+      errorMessage: String,
       pages: [null, Array],
       pageFormat: [null, Object],
       positions: [null, Object],
@@ -761,7 +773,7 @@ class WebMscoreLoader {
         <div class="slcwd-pages-display-error" v-if="errored">
           <div style="font-size: 64px; opacity: 0.37;"><i class="las la-exclamation-circle"></i></div>
           <p>Failed to load the score.</p>
-          <p>Reload the page to try again.</p>
+          <p>{{ errorMessage }}</p>
         </div>
         <div class="slcwd-pages-display-empty" v-if="!loaded && !errored"></div>
         <div class="slcwd-pages-display-i" ref="innerRef" v-if="loaded">
@@ -826,6 +838,9 @@ class WebMscoreLoader {
         props.tracks[currentTrackIndex.value] ?? null
       );
       function nextTrack() {
+        if (currentTrack.value.type == "mscz/synth") {
+          audio.value.destroy();
+        }
         currentTrackIndex.value = (currentTrackIndex.value+1)% props.tracks.length;
       }
 
@@ -909,6 +924,13 @@ class WebMscoreLoader {
         if(audio.value.duration() != 0)
           progressRatio.value = audio.value.seek() / audio.value.duration();
       })
+
+      Vue.onUnmounted(() => {
+        stop();
+        if (currentTrack.value.type == "mscz/synth") {
+          audio.value.destroy();
+        }
+      });
 
       function playPause() {
         if (!audio.value || !loaded.value) return
@@ -1101,6 +1123,7 @@ class WebMscoreLoader {
       const scoreMeta = Vue.ref(null)
       const loaded = Vue.computed(() => scoreMeta.value != null)
 
+      const errorMessage = Vue.ref("Reload the page to try again.")
       const errored = Vue.ref(false)
       const graphics = Vue.ref(null)
 
@@ -1165,6 +1188,7 @@ class WebMscoreLoader {
 
         if (WebMscoreSupported.includes(props.type)) {
           loader.value = new WebMscoreLoader(scoreSrc.value, props.type);
+          errorMessage.value = "Please note that scores written with MuseScore > v4.3 are not supported."
         } else if (props.type == "wd-data") {
           loader.value = new WdDataLoader(scoreSrc.value);
         } else {
@@ -1204,10 +1228,17 @@ class WebMscoreLoader {
         }).catch((_err) => console.warn('events positions load failed.', _err));
       })
 
+      Vue.onUnmounted(() => {
+        if (loader.value)
+          loader.value.destroy()
+        }
+      )
+
 
       return {
         refMain, scoreMeta, loaded, errored, graphics, positions, audioTime,
-        refAudioApi, selectTimes, playPause, addProgress, refPagesApi, handleExactKey, tracks_ref, downloads
+        refAudioApi, selectTimes, playPause, addProgress, refPagesApi, handleExactKey, tracks_ref, downloads,
+        errorMessage
       }
     },
     components: { PagesDisplay, ScorePlayback },
@@ -1223,6 +1254,7 @@ class WebMscoreLoader {
       >
         <PagesDisplay
           :loaded="loaded" :errored="errored"
+          :errorMessage="errorMessage"
           :pages="graphics"
           :downloads="downloads"
           :pageFormat="scoreMeta ? scoreMeta.pageFormat : null"
