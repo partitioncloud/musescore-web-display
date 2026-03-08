@@ -9,7 +9,7 @@ import * as mm from "../node_modules/@magenta/music/es6/core.js";
 // Download artifacts from https://github.com/CarlGao4/webmscore/actions/runs/14575709935 from now,
 // and serve them from /webmscore
 // CDN link (with old version) https://cdn.jsdelivr.net/npm/webmscore/webmscore.mjs
-const LIB_WEBMSCORE = "/webmscore/webmscore.mjs";
+const LIB_WEBMSCORE = "./webmscore/webmscore.mjs";
 
 // From https://musescore.org/en/handbook/3/file-formats#share-with-other-software
 const WebMscoreSupported = [
