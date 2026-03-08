@@ -1,0 +1,13 @@
+diff --git a/score-display/score-display.global.js b/score-display/score-display.global.js
+index a6aee88..8220426 100644
+--- a/score-display/score-display.global.js
++++ b/score-display/score-display.global.js
+@@ -3,8 +3,6 @@ import * as Vue from "../node_modules/vue/dist/vue.esm-browser.prod.js";
+ // Howler: audio library
+ import {Howl} from "../node_modules/howler/dist/howler.min.js";
+ 
+-import * as mm from "../node_modules/@magenta/music/es6/core.js";
+-
+ // See https://github.com/LibreScore/webmscore/pull/15 : no support for recent Mscore files
+ // Download artifacts from https://github.com/CarlGao4/webmscore/actions/runs/14575709935 from now,
+ // and serve them from /webmscore

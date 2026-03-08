@@ -4,11 +4,11 @@
 
 ![screenshot](screenshot.png)
 
-> You can buy [the original author](https://github.com/yezhiyi9670) [a coffee](https://afdian.net/a/yezhiyi9670) if you like this work.
+> Original work from [yezhiyi9670](https://github.com/yezhiyi9670)
 
-This is a simple and elegant library allowing you create an interactive showcase of your score, similar to the score showcase seen on musescore.com. [See a working demo here](https://partitioncloud.github.io/musescore-web-display/).
+This is a simple and elegant library allowing you to create an interactive showcase of your score, similar to the score showcase seen on musescore.com. [See a working demo here](https://partitioncloud.github.io/musescore-web-display/).
 
-This library uses [Vue](https://vuejs.org/), [Howler](https://github.com/goldfire/howler.js), the [Line Awesome icon font](https://icons8.com/line-awesome) and [webmscore](https://github.com/LibreScore/webmscore). It is deliberately made into a global and buildless library for easy integration with site builders like WordPress.
+This library uses [Vue](https://vuejs.org/), [Howler](https://github.com/goldfire/howler.js), the [Line Awesome icon font](https://icons8.com/line-awesome) and [webmscore](https://github.com/LibreScore/webmscore).
 
 ## Features
 
@@ -21,9 +21,20 @@ This library uses [Vue](https://vuejs.org/), [Howler](https://github.com/goldfir
 
 ## Running
 
-This is a **buildless** library, hence does not require any build setup. Download the repository, host it via a local HTTP server and access `index.html` in your web browser.
+This library is bundled with `rolldown`. You can find bundled code in the [releases tab](https://github.com/partitioncloud/musescore-web-display/releases). You will also need to serve webmscore, that you can download [there](https://github.com/CarlGao4/webmscore/releases/tag/webmscore-4.3.2).  
+If you absolutely need a buildless library, the build step was only added in v2.0.0.
 
-Note that it won't work if you open `index.html` directly in your file explorer.
+## Building
+
+```bash
+git clone https://github.com/partitioncloud/musescore-web-display
+cd musescore-web-display
+
+make target # This will download webmscore and bundle the main JS file to target/score-display.rolldown.js
+```
+
+You can build a bundle without MIDI tracks support, which will be ~10 times smaller with `make target/score-display.rolldown.no-mm.js`.
+The `<score-display...>no-cdn.js` versions will require you to serve `line-awesome` and an audio font along with webmscore, the css and js files.
 
 ## Usage
 
@@ -33,8 +44,8 @@ The main library is `score-display/score-display.global.js`, which exposes a new
 
 You have two options to embed a score:
 1. export all files using the [python script](./py-script/wd_export.py), and serve these files directly to the client
-2. serve directly the MuseScore (mscz) file, the client will convert it on his machine.  
-   This will be a bit heavier for the client (~20MB), [exclude very old browsers](https://github.com/LibreScore/webmscore?tab=readme-ov-file#browser-support), [may need a bit of setup to get all fonts working](https://github.com/LibreScore/webmscore?tab=readme-ov-file#load-extra-fonts) but could simplify your backend
+2. serve directly the MuseScore (mscz) file, that will be processed in the client's browser.  
+   This will be a bit heavier for the client (~20MB), [exclude very old browsers](https://github.com/LibreScore/webmscore?tab=readme-ov-file#browser-support), [may need a bit of setup to get all fonts working](https://github.com/LibreScore/webmscore?tab=readme-ov-file#load-extra-fonts) on some scores, but will simplify your backend
 
 #### Serving from exported directory
 
@@ -70,7 +81,7 @@ Your component will look like that:
 </score-display>
 ```
 
-Unfortunately, [recent MuseScore files are not supported yet by the main branch of webmscore](https://github.com/LibreScore/webmscore/pull/15), you should download artifacts from [here](https://github.com/CarlGao4/webmscore/actions/runs/14575709935) and serve them from your server (look at the first lines of [score-display.global.js](./score-display/score-display.global.js))
+Unfortunately, webmscore is not always up-to-date with MuseScore, thus scores saved with MuseScore > v4.3 are not yet supported.
 
 
 ### Integrating into existing HTML
@@ -80,9 +91,21 @@ Dependencies will be loaded when needed by the script, here is how to integrate 
 1. Add this library.
 
 ```html
-<link rel="stylesheet" href="./score-display/score-display.css" />
-<script type="module" src="./score-display/score-display.global.js"></script>
+<link rel="stylesheet" href="<path to library>/score-display.css" />
+<script type="module" src="<path to library>/score-display.rolldown.js"></script>
 ```
+
+In `<path to library>`, you will need to serve:
+```
+├── score-display.css
+├── score-display.rolldown.js   or any of its variants
+├── soundfonts                 *if using a no-cdn.js variant
+│   └── FluidR3Mono_GM.sf3
+├── style                      *if using a no-cdn.js variant
+│   └── line-awesome
+└── webmscore                   if you plan to load scores with type!=wd-data
+```
+Those are obtainable through `make webmscore target/style/line-awesome target/soundfonts/FluidR3Mono_GM.sf3`
 
 2. A container element for your score showcase (needs to be after the `<script>` tag)
 
@@ -98,16 +121,3 @@ Dependencies will be loaded when needed by the script, here is how to integrate 
   <score-download href=".../my score.pdf">Download Pdf</score-download>
 </score-display>
 ```
-
-### Remove CDN calls
-
-If you need a version of this library that does not use CDNs, you can run `make no-cdn`.  
-This will create a `target` directory with all the files you need to use this library without CDNs.  
-> ⚠️ For now, you still need to download CarlGao4's webmscore manually ⚠️
-
-Then, you can replace the previous calls to this library with:
-```html
-<link rel="stylesheet" href="./[path to `target`]/score-display.css" />
-<script type="module" src="./[path to `target`]/score-display.global.js"></script>
-```
-

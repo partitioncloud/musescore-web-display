@@ -1,10 +1,9 @@
-import * as Vue from "https://unpkg.com/vue@3.5.13/dist/vue.esm-browser.js";
+import * as Vue from "../node_modules/vue/dist/vue.esm-browser.prod.js";
 
 // Howler: audio library
-import "https://cdn.jsdelivr.net/npm/howler@2.2.4/dist/howler.min.js";
+import {Howl} from "../node_modules/howler/dist/howler.min.js";
 
-const LIB_TONE_JS = "https://cdnjs.cloudflare.com/ajax/libs/tone/15.1.5/Tone.js";
-const LIB_MAGENTA_CORE = "https://cdn.jsdelivr.net/npm/@magenta/music@^1.23.1/es6/core.js"
+import * as mm from "../node_modules/@magenta/music/es6/core.js";
 
 // See https://github.com/LibreScore/webmscore/pull/15 : no support for recent Mscore files
 // Download artifacts from https://github.com/CarlGao4/webmscore/actions/runs/14575709935 from now,
@@ -28,18 +27,12 @@ const WebMscoreSupported = [
 ];
 
 
-let mm; // Magenta: midi library
 /** Returns a promise that fulfills once magenta and Tone.js are loaded */
 function ensure_magenta() {
-  if (mm !== undefined) return Promise.resolve();
-
-  // Tone.js needs to be synchronously loaded before magenta
-  return import(LIB_TONE_JS).then(() =>
-    import(LIB_MAGENTA_CORE)).then(() => {
-      mm = window.core; // MagentaMusic's core (mm) gets loaded into window.core
-      return Promise.resolve();
-    });
-  }
+  if (typeof mm !== 'undefined') return Promise.resolve();
+  console.error("Can't load a MIDI track, not bundled with Magenta Music.");
+  return Promise.reject();
+}
 
 let WebMscore;
 async function ensure_webmscore() {

@@ -1,0 +1,12 @@
+100871c100871,100875
+< 	loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css");
+---
+> 	function absoluteURL(relative) {
+> 		let currentScriptDir = import.meta.url.substr(0, import.meta.url.lastIndexOf('/'));
+> 		return currentScriptDir + "/" + relative
+> 	}
+> 	loadStylesheet("./style/line-awesome/css/line-awesome.min.css");
+101158c101162
+< 			const soundFontData = new Uint8Array(await (await fetch("https://cdn.jsdelivr.net/gh/musescore/MuseScore@2.1/share/sound/FluidR3Mono_GM.sf3")).arrayBuffer());
+---
+> 			const soundFontData = new Uint8Array(await (await fetch(absoluteURL('soundfonts/FluidR3Mono_GM.sf3'))).arrayBuffer());
