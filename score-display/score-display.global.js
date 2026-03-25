@@ -11,11 +11,6 @@ import * as mm from "../node_modules/@magenta/music/es6/core.js";
 // CDN link (with old version) https://cdn.jsdelivr.net/npm/webmscore/webmscore.mjs
 const LIB_WEBMSCORE = "./webmscore/webmscore.mjs";
 
-// When synthesizing with WebMscore,
-// on low-end devices, playback can easily be ahead of processing.
-// Thus, we wait a bit when reaching buffer end to avoid scattered output
-const BUFFER_WAIT_LENGTH = 5;
-
 // From https://musescore.org/en/handbook/3/file-formats#share-with-other-software
 const WebMscoreSupported = [
   'gp', 'gpx', 'gp5', 'gp4', 'gp3',
@@ -177,6 +172,7 @@ class WebMscorePlayer {
     this.CHANNELS = 2
     this.FRAME_LENGTH = 512;
     this.BUFFER_QUEUE = [];
+    this.BUFFER_WAIT_LENGTH = 5;
 
     this.audioCtx = new (AudioContext || webkitAudioContext)({latencyHint: "interactive"});
     this.currentFrame = 0; // ~ currentTime
@@ -236,6 +232,7 @@ class WebMscorePlayer {
         }
         if (!this.waitForProcessing) {
           console.warn("WebMscorePlayer: Empty buffer queue");
+          this.BUFFER_WAIT_LENGTH *= 2;
           this.waitForProcessing = true;
         }
 
@@ -243,7 +240,7 @@ class WebMscorePlayer {
       }
 
       if (this.waitForProcessing) {
-        if (this.BUFFER_QUEUE.length < BUFFER_WAIT_LENGTH && !this.synth_complete) {
+        if (this.BUFFER_QUEUE.length < this.BUFFER_WAIT_LENGTH && !this.synth_complete) {
           return this.outputBufferFillZeroes(e);
         }
         this.waitForProcessing = false;
