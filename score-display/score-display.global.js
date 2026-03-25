@@ -172,7 +172,7 @@ class WebMscorePlayer {
     this.CHANNELS = 2
     this.FRAME_LENGTH = 512;
     this.BUFFER_QUEUE = [];
-    this.BUFFER_WAIT_LENGTH = 5;
+    this.BUFFER_WAIT_LENGTH = 64;
 
     this.audioCtx = new (AudioContext || webkitAudioContext)({latencyHint: "interactive"});
     this.currentFrame = 0; // ~ currentTime
@@ -232,7 +232,7 @@ class WebMscorePlayer {
         }
         if (!this.waitForProcessing) {
           console.warn("WebMscorePlayer: Empty buffer queue");
-          this.BUFFER_WAIT_LENGTH *= 2;
+          this.BUFFER_WAIT_LENGTH = Math.min(256, this.BUFFER_WAIT_LENGTH * 2);
           this.waitForProcessing = true;
         }
 
