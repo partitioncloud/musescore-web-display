@@ -11,6 +11,11 @@ import * as mm from "../node_modules/@magenta/music/es6/core.js";
 // CDN link (with old version) https://cdn.jsdelivr.net/npm/webmscore/webmscore.mjs
 const LIB_WEBMSCORE = "./webmscore/webmscore.mjs";
 
+// When synthesizing with WebMscore,
+// on low-end devices, playback can easily be ahead of processing.
+// Thus, we wait a bit when reaching buffer end to avoid scattered output
+const BUFFER_WAIT_LENGTH = 5;
+
 // From https://musescore.org/en/handbook/3/file-formats#share-with-other-software
 const WebMscoreSupported = [
   'gp', 'gpx', 'gp5', 'gp4', 'gp3',
@@ -173,8 +178,9 @@ class WebMscorePlayer {
     this.FRAME_LENGTH = 512;
     this.BUFFER_QUEUE = [];
 
-    this.audioCtx = new (AudioContext || webkitAudioContext)();
+    this.audioCtx = new (AudioContext || webkitAudioContext)({latencyHint: "interactive"});
     this.currentFrame = 0; // ~ currentTime
+    this.waitForProcessing = true; // waiting for the buffer queue to refill
 
     this.mscz = options.mscz || new WebMscoreLoader(
       options.src.at(0),
@@ -203,6 +209,13 @@ class WebMscorePlayer {
     onload();
   }
 
+  // When there is no data to play, fill output buffer with zeroes
+  outputBufferFillZeroes(e) {
+    for (let c = 0; c < this.CHANNELS; c++) {
+      e.outputBuffer.getChannelData(c).fill(0);
+    }
+  }
+
   setupProcessor() {
     const processor = this.audioCtx.createScriptProcessor(
       this.FRAME_LENGTH,
@@ -215,14 +228,25 @@ class WebMscorePlayer {
     processor.onaudioprocess = (e) => {
       if (this.BUFFER_QUEUE.length === 0) {
         // There is nothing left in the queue
-        for (let c = 0; c < this.CHANNELS; c++) {
-          e.outputBuffer.getChannelData(c).fill(0);
-        }
-        if (this.synth_complete && this.is_playing) {
+        this.outputBufferFillZeroes(e);
+        if (this.synth_complete) {
           // There is nothing in the queue and everything is already synthesized
-          this.onend()
+          if (this.is_playing) this.onend();
+          return;
         }
+        if (!this.waitForProcessing) {
+          console.warn("WebMscorePlayer: Empty buffer queue");
+          this.waitForProcessing = true;
+        }
+
         return;
+      }
+
+      if (this.waitForProcessing) {
+        if (this.BUFFER_QUEUE.length < BUFFER_WAIT_LENGTH && !this.synth_complete) {
+          return this.outputBufferFillZeroes(e);
+        }
+        this.waitForProcessing = false;
       }
 
       const chunk = this.BUFFER_QUEUE.shift();
@@ -325,6 +349,7 @@ class WebMscorePlayer {
 
       this.synth_complete = false // we don't want onend to be called
       this.BUFFER_QUEUE = [];
+      this.waitForProcessing = true;
 
       this.next_seek = time;
 
