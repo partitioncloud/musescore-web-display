@@ -175,7 +175,7 @@ class WebMscorePlayer {
     this.BUFFER_WAIT_LENGTH = 64;
 
     this.audioCtx = new (AudioContext || webkitAudioContext)({latencyHint: "interactive"});
-    this.currentFrame = 0; // ~ currentTime
+    this.currentTime = 0;
     this.waitForProcessing = true; // waiting for the buffer queue to refill
 
     this.mscz = options.mscz || new WebMscoreLoader(
@@ -218,7 +218,7 @@ class WebMscorePlayer {
       0,
       this.CHANNELS
     );
-    this.currentFrame = 0;
+    this.currentTime = 0;
 
     // At each frame, we retrieve a piece of synthesized audio from BUFFER_QUEUE
     processor.onaudioprocess = (e) => {
@@ -246,12 +246,12 @@ class WebMscorePlayer {
         this.waitForProcessing = false;
       }
 
-      const chunk = this.BUFFER_QUEUE.shift();
+      const frame = this.BUFFER_QUEUE.shift();
       for (let c = 0; c < this.CHANNELS; c++) {
         const channel = e.outputBuffer.getChannelData(c);
-        channel.set(chunk[c]);
+        channel.set(frame.chunk[c]);
       }
-      this.currentFrame += 1;
+      this.currentTime = frame.startTime;
     };
 
     processor.connect(this.audioCtx.destination);
@@ -278,7 +278,10 @@ class WebMscorePlayer {
           (c + 1) * this.FRAME_LENGTH
         );
       }
-      this.BUFFER_QUEUE.push(chunk);
+      this.BUFFER_QUEUE.push({
+        chunk: chunk,
+        startTime: res.startTime
+      });
 
       if (res.done) {
         this.synth_complete = true
@@ -300,7 +303,7 @@ class WebMscorePlayer {
       await this.mscz.score;
       const start_time = Math.min(this.next_seek, this.duration()) ?? 0;
 
-      this.currentFrame = start_time*this.audioCtx.sampleRate/this.FRAME_LENGTH;
+      this.currentTime = start_time;
       this.synthAudioToQueue(start_time); // synth in the background
 
       this.next_seek = null;
@@ -334,7 +337,7 @@ class WebMscorePlayer {
       if (!this.is_playing && this.next_seek !== null)
         return this.next_seek;
 
-      return Math.min(this.currentFrame*this.FRAME_LENGTH / this.audioCtx.sampleRate, this.duration());
+      return Math.min(this.currentTime, this.duration());
     }
 
     // We want to start ON the selected note, so we seek a bit earlier
