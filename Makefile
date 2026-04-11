@@ -52,7 +52,7 @@ pages: target target/style/line-awesome pages/html pages/style
 	cp -r data ./pages/
 	rm pages/*.orig
 	mv pages/score-display.rolldown.no-cdn.js pages/score-display.rolldown.js
-	sed -i 's/LIB_WEBMSCORE = "\.\.\/webmscore\//LIB_WEBMSCORE = "..\/webmscore'$(WEBMSCORE_VERSION)'\//' pages/score-display.rolldown.js
+	sed -i 's/LIB_WEBMSCORE = "\.\.\/webmscore\//LIB_WEBMSCORE = ".\/webmscore'$(WEBMSCORE_VERSION)'\//' pages/score-display.rolldown.js
 
 pages/style: $(wildcard style/*.css)
 	mkdir -p pages/style
