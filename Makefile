@@ -1,6 +1,6 @@
 JS_SOURCES := $(wildcard score-display/*.js score-display/**/*.js)
-WEBMSCORE_VERSION := 4.3.2
-WEBMSCORE_SOURCE  := https://github.com/CarlGao4/webmscore/releases/download/webmscore-$(WEBMSCORE_VERSION)/webmscore4-$(WEBMSCORE_VERSION).tgz
+WEBMSCORE_VERSION := 4.6.5
+WEBMSCORE_SOURCE  := https://github.com/augustin64/MuseScore/releases/download/webmscore-$(WEBMSCORE_VERSION)/webmscore4-$(WEBMSCORE_VERSION).tgz
 WEBMSCORE := ./webmscore$(WEBMSCORE_VERSION)
 
 target: target/soundfonts/FluidR3Mono_GM.sf3 target/score-display.rolldown.js $(WEBMSCORE)
