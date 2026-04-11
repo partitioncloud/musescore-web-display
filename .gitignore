@@ -1,5 +1,7 @@
-webmscore
+webmscore*/
+.vscode/
 node_modules
 target
 pages
 build-no-mm
+*.sf3

@@ -1,9 +1,14 @@
 JS_SOURCES := $(wildcard score-display/*.js score-display/**/*.js)
+WEBMSCORE_VERSION := 4.3.2
+WEBMSCORE_SOURCE  := https://github.com/CarlGao4/webmscore/releases/download/webmscore-$(WEBMSCORE_VERSION)/webmscore4-$(WEBMSCORE_VERSION).tgz
+WEBMSCORE := ./webmscore$(WEBMSCORE_VERSION)
 
-target: target/soundfonts/FluidR3Mono_GM.sf3 target/score-display.rolldown.js webmscore
+target: target/soundfonts/FluidR3Mono_GM.sf3 target/score-display.rolldown.js $(WEBMSCORE)
 	mkdir -p target/soundfonts
 	cp ./score-display/score-display.css target
-	cp ./webmscore/ target/ -r
+	cp $(WEBMSCORE)/ target/ -r
+
+all: target pages target/score-display.rolldown.no-mm.js
 
 target/score-display.rolldown.js: node_modules $(JS_SOURCES) patches/score-display.rolldown.js.no-cdn.diff
 	mkdir -p target
@@ -31,11 +36,11 @@ target/style/line-awesome: node_modules
 	cp -r node_modules/line-awesome/dist/line-awesome/fonts/* target/style/line-awesome/fonts/
 	cp -r node_modules/line-awesome/dist/line-awesome/css/line-awesome.min.css target/style/line-awesome/css/
 
-webmscore:
-	curl -SL https://github.com/CarlGao4/webmscore/releases/download/webmscore-4.3.2/webmscore4-4.3.2.tgz > webmscore4-4.3.2.tgz
-	tar -xvzf ./webmscore4-4.3.2.tgz
-	mv ./package ./webmscore
-	rm ./webmscore4-4.3.2.tgz
+$(WEBMSCORE):
+	curl -SL $(WEBMSCORE_SOURCE) > webmscore4.tgz
+	tar -xvzf ./webmscore4.tgz
+	mv ./package $(WEBMSCORE)
+	rm ./webmscore4.tgz
 
 node_modules:
 	npm ci
@@ -45,7 +50,9 @@ pages: target target/style/line-awesome pages/html pages/style
 	mkdir -p pages
 	cp -r target/* ./pages/
 	cp -r data ./pages/
-	mv pages/score-display.rolldown.no-cdn.js pages/score-display.rolldown.js 
+	rm pages/*.orig
+	mv pages/score-display.rolldown.no-cdn.js pages/score-display.rolldown.js
+	sed -i 's/LIB_WEBMSCORE = "\.\.\/webmscore\//LIB_WEBMSCORE = "..\/webmscore'$(WEBMSCORE_VERSION)'\//' pages/score-display.rolldown.js
 
 pages/style: $(wildcard style/*.css)
 	mkdir -p pages/style
