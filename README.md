@@ -21,7 +21,7 @@ This library uses [Vue](https://vuejs.org/), [Howler](https://github.com/goldfir
 
 ## Running
 
-This library is bundled with `rolldown`. You can find bundled code in the [releases tab](https://github.com/partitioncloud/musescore-web-display/releases). You will also need to serve webmscore, that you can download [there](https://github.com/CarlGao4/webmscore/releases/tag/webmscore-4.3.2).  
+This library is bundled with `rolldown`. You can find bundled code in the [releases tab](https://github.com/partitioncloud/musescore-web-display/releases). You will also need to serve webmscore, that you can download [there](https://github.com/augustin64/MuseScore/releases).  
 If you absolutely need a buildless library, the build step was only added in v2.0.0.
 
 ## Building
@@ -81,7 +81,7 @@ Your component will look like that:
 </score-display>
 ```
 
-Unfortunately, webmscore is not always up-to-date with MuseScore, thus scores saved with MuseScore > v4.3 are not yet supported.
+Unfortunately, this requires an up-to-date version of webmscore, and recent versions of MuseScore aren't always supported (currently, supports v4.6.5).
 
 
 ### Integrating into existing HTML

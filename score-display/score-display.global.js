@@ -5,7 +5,7 @@ import {Howl} from "../node_modules/howler/dist/howler.min.js";
 
 import {MidiPlayer} from "./players/midi.js";
 import {WebMscorePlayer} from "./players/webmscore.js"
-import {WebMscoreLoader,WebMscoreSupported} from "./loaders/webmscore.js"
+import {WebMscoreLoader,WebMscoreSupported,LIB_WEBMSCORE_MAJOR} from "./loaders/webmscore.js"
 import {WdDataLoader} from "./loaders/wd_data.js"
 
 
@@ -682,7 +682,7 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
 
         if (WebMscoreSupported.includes(props.type)) {
           loader.value = new WebMscoreLoader(scoreSrc.value, props.type);
-          errorMessage.value = "Please note that scores written with MuseScore > v4.3 are not supported."
+          errorMessage.value = `Please note that scores written with MuseScore > v${LIB_WEBMSCORE_MAJOR} are not supported.`
         } else if (props.type == "wd-data") {
           loader.value = new WdDataLoader(scoreSrc.value);
         } else {

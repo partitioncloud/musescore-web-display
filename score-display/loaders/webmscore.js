@@ -1,8 +1,16 @@
-// See https://github.com/LibreScore/webmscore/pull/15 : no support for recent Mscore files
-// Download artifacts from https://github.com/CarlGao4/webmscore/releases/tag/webmscore-4.3.2 from now,
-// and serve them from /webmscore
-// CDN link (with old version) https://cdn.jsdelivr.net/npm/webmscore/webmscore.mjs
+// You will need to serve Webmscore, that you can get:
+// From https://github.com/LibreScore/webmscore:
+// - supports MuseScore v4.0 files, see PR#15.
+// - Served at https://cdn.jsdelivr.net/npm/webmscore/webmscore.mjs
+// From https://github.com/CarlGao4/webmscore:
+// - supports MuseScore v4.3.2, see PR#1
+// From https://github.com/augustin64/MuseScore:
+// - supports MuseScore v4.6.5
 const LIB_WEBMSCORE = "../webmscore/webmscore.mjs";
+// LIB_WEBMSCORE_VERSION is defined by rolldown in the Makefile
+export const LIB_WEBMSCORE_MAJOR = (
+  (ver) => ver.substr("", ver.lastIndexOf("."))
+)(LIB_WEBMSCORE_VERSION);
 
 // From https://musescore.org/en/handbook/3/file-formats#share-with-other-software
 export const WebMscoreSupported = [
