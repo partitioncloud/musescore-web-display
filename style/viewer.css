@@ -26,7 +26,7 @@ input[type="file"] {
   background-color: #dfdff1;
   transition: 1s box-shadow;
   max-width: 500px;
-  margin: auto;
+  margin: 5vh auto;
 }
 
 .file-area:hover {

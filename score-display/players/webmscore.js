@@ -48,8 +48,8 @@ export class WebMscorePlayer {
     let score = await this.mscz.score;
     let metadata = await score.metadata();
     await this.mscz.setSoundFont();
-    
-    await score.generateExcerpts();    
+
+    await score.generateExcerpts();
     // TODO: the score may be used to generate graphics etc in the meantime, want to wait for this to be ready
     await score.setExcerptId(this.excerpt);
 

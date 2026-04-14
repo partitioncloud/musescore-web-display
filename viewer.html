@@ -4,7 +4,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MuseScore online viewer</title> 
+  <title>Online MuseScore Viewer & Player - View .mscz Files in Browser</title>
+  <meta name="description" content="View and play MuseScore files (.mscz, .mxl) directly in your browser. Free online viewer with audio playback and sheet music display.">
+  <meta name="keywords" content="MuseScore viewer, MSCZ player, sheet music online, music notation viewer">
+  <meta property="og:title" content="Online MuseScore Viewer & Player">
+  <meta property="og:description" content="Load and play your MuseScore files online. No installation needed.">
+  <meta property="og:type" content="website">
   <script>
     function fileToBase64(file) {
       return new Promise((resolve, reject) => {
@@ -24,11 +29,12 @@
 
     async function loadFile() {
       console.log("Loading new file..");
-      const input = document.getElementById('file-picker'); 
+      const input = document.getElementById('file-picker');
+      const extension = input.files[0].name.split(".").pop();
       const base64score = await fileToBase64(input.files[0]);
 
       document.getElementById("score-container").innerHTML += `
-        <score-display id="score-display" src="data:.mscz;base64,${base64score}" type="mscz">
+        <score-display id="score-display" src="data:.${extension};base64,${base64score}" type="${extension}">
           <score-track type="mscz/synth:all">Tutti</score-track>
         </score-display>
       `;
@@ -92,6 +98,7 @@
           </svg>
         </a>Online MuseScore viewer & player
       </h1>
+      <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 0.95rem;">View and play MuseScore files (.mscz, .mxl, <a href="https://musescore.org/en/handbook/3/file-formats#share-with-other-software">and more</a>) directly in your browser with audio playback</p>
     </div>
 
     <div id="score-container">
@@ -102,9 +109,10 @@
         <div class="inner-file-area">
           <div>
             <i class="las la-upload"></i><br/>
-            Select or drag &amp; drop your file
+            Select or drag &amp; drop your MuseScore file<br/>
+            <small style="color: #999; margin-top: 0.5rem; display: block;">.mscz, .mxl formats supported</small>
           </div>
-        </div> 
+        </div>
       </div>
       <div style="text-align: center">
         <button id="restore-viewer" class="hidden" onclick="loadFile()">
