@@ -58,13 +58,6 @@ export class WebMscoreLoader {
     .then((filedata) =>
       WebMscore.load(this.type, new Uint8Array(filedata))
     )
-    .then((score) => {
-      if (this.type == "mscz") return score;
-
-      // Calling "saveSvg, savePositions, ..." directly causes a WorkerError
-      return score.saveMsc("mscz")
-      .then((msczdata) => WebMscore.load("mscz", msczdata))
-    });
   }
 
   async loadMetaData() {
