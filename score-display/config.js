@@ -1,0 +1,1 @@
+export const DEFAULT_SOUNDFONT = "https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus";

@@ -1,4 +1,5 @@
 import {WebMscoreLoader} from "../loaders/webmscore.js";
+import {DEFAULT_SOUNDFONT} from "../config.js";
 
 export class WebMscorePlayer {
   /**

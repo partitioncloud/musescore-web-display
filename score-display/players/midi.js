@@ -1,4 +1,5 @@
 import * as mm from "../../node_modules/@magenta/music/es6/core.js";
+import {DEFAULT_SOUNDFONT} from "../config.js";
 
 /** Returns a promise that fulfills once magenta and Tone.js are loaded */
 function ensure_magenta() {
@@ -6,8 +7,6 @@ function ensure_magenta() {
   console.error("Can't load a MIDI track, not bundled with Magenta Music.");
   return Promise.reject();
 }
-
-const DEFAULT_SOUNDFONT = "https://storage.googleapis.com/magentadata/js/soundfonts/sgm_plus";
 
 /** Wrapper of a MagentaJS player to have the same interface as howler's Howl */
 export class MidiPlayer {
