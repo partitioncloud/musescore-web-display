@@ -119,5 +119,9 @@ Those are obtainable through `make webmscore target/style/line-awesome target/so
 
   <score-download href=".../my score.mscz">Download Mscz</score-download><!-- And download buttons! -->
   <score-download href=".../my score.pdf">Download Pdf</score-download>
+  
+  <!-- If score is loaded with webmscore (type=anything else than wd-data), direct exports are possible -->
+  <!-- Available formats: mscz (but you'd better provide an URL to your file directly), musicxml, pdf, mxl, mid, ogg -->
+  <score-download href="mscz/export:pdf">Export Pdf</score-download>
 </score-display>
 ```
