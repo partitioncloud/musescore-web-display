@@ -48,23 +48,27 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
       downloads: Object
     },
     setup(props, ctx) {
-      console.log(props);
-
       function close() {
         ctx.emit('close')
       }
 
       function download(element) {
-        ctx.emit('download', element)
+        if (element.isLoading || element.errored) return;
+
+        element.isLoading = true;
+        ctx.emit('download', element, () => {element.isLoading = false}, () => {element.errored = true})
       }
 
       return { close, download }
     },
     template: /*html*/`
       <div class="slcwd-exports" ref="ref">
-        <button @click="close">x</button>
+        <button class="slcwd-exports-close" @click="close"><i class="las la-times"></i></button>
         <div v-for="el of downloads">
           <button class="slcwd-button" @click="() => download(el)">
+            <i v-if="el.errored" class="las la-exclamation-circle slcwd-export-error"></i>
+            <i v-else-if="el.isLoading" class="las la-circle-notch slcwd-spinner"></i>
+            <i v-else class="las la-file-download"></i>
             {{ el.name }}
           </button>
         </div>
@@ -292,8 +296,8 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
         ctx.emit('select', ret)
       }
 
-      function download(element) {
-        ctx.emit('download', element);
+      function download(element, callback, errcallback) {
+        ctx.emit('download', element, callback, errcallback);
       }
 
       function closeExportPopup () {
@@ -345,7 +349,7 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
         </button>
         <button
           v-if="downloads.length == 1"
-          @click="() => download(downloads[0])"
+          @click="() => download(downloads[0], () => {}, () => {})"
           class="slcwd-button"
         >
             <i class="las la-file-download"></i> <span class="label">{{ downloads[0].name }}</span>
@@ -357,13 +361,13 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
         >
           <i class="las la-file-download"></i> <span class="label">Download</span>
         </button>
-        <ExportPopup
-          v-if="showExportPopup"
-          :downloads=downloads
-          @close="closeExportPopup"
-          @download="download"
-        />
       </div>
+      <ExportPopup
+        v-show="showExportPopup"
+        :downloads=downloads
+        @close="closeExportPopup"
+        @download="download"
+      />
     `
   }
 
@@ -786,26 +790,31 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
         }
       )
 
-      async function download(element) {
-        let dataLoc = element.href;
-        let filename = null; // If null, will get it from URL
-        if (dataLoc.startsWith("mscz/export:")) {
-          if (!WebMscoreSupported.includes(props.type)) {// We have no mscz source file
-            console.error("Could not save file, score is not loaded from websmcore", element);
-            return;
-          }
-          if (loader.value == null) {
-            console.error("Loader not available.");
-            return;
-          }
+      async function download(element, callback, errcallback) {
+        try {
+          let dataLoc = element.href;
+          let filename = null;
+          if (dataLoc.startsWith("mscz/export:")) {
+            if (!WebMscoreSupported.includes(props.type)) // We have no mscz source file
+              throw "Could not save file, score is not loaded from websmcore";
+            if (loader.value == null)
+              throw "Loader not available.";
 
-          const exportFormat = dataLoc.split(":")[1];
-          const data = await loader.value.exportAs(exportFormat);
-          filename = `${scoreMeta.value.title}.${exportFormat}`;
-          dataLoc = new Blob([data]);
+            const exportFormat = dataLoc.split(":")[1];
+            const data = await loader.value.exportAs(exportFormat);
+            filename = `${scoreMeta.value.title}.${exportFormat}`;
+            dataLoc = new Blob([data]);
+          } else {
+            filename = element.href.substr(element.href.lastIndexOf("/")+1);
+          }
+          
+          saveAs(dataLoc, filename);
+          callback();
+
+        } catch (error) {
+          console.error(`While exporting for "${element.name}" : ${error}`);
+          errcallback();
         }
-        
-        saveAs(dataLoc, filename);
       }
 
 

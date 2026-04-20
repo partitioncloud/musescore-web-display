@@ -154,7 +154,7 @@ export class WebMscoreLoader {
     if (format == "ogg")
       return score.saveAudio("ogg");
 
-    console.error(`Unknown download format ${format}`);
+    throw `Unknown download format ${format}`;
   }
 
   async destroy() {

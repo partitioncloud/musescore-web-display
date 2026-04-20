@@ -70,8 +70,7 @@ export class WdDataLoader {
   }
 
   async exportAs(format) {
-    console.error("WdDataLoader can't generate an export.");
-    return
+    throw "WdDataLoader can't generate an export.";
   }
 
   async destroy() {}

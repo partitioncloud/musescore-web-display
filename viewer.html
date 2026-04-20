@@ -36,6 +36,12 @@
       document.getElementById("score-container").innerHTML += `
         <score-display id="score-display" src="data:.${extension};base64,${base64score}" type="${extension}">
           <score-track type="mscz/synth:all">Tutti</score-track>
+
+          <score-download href="mscz/export:mscz">Download mscz</score-download>
+          <score-download href="mscz/export:pdf">Download pdf</score-download>
+          <score-download href="mscz/export:mxl">Download mxl</score-download>
+          <score-download href="mscz/export:musicxml">Download MusicXML</score-download>
+          <score-download href="mscz/export:ogg">Download audio (ogg)</score-download>
         </score-display>
       `;
 
