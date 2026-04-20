@@ -69,5 +69,10 @@ export class WdDataLoader {
     return graphics;
   }
 
+  async exportAs(format) {
+    console.error("WdDataLoader can't generate an export.");
+    return
+  }
+
   async destroy() {}
 }

@@ -3,6 +3,8 @@ import * as Vue from "../node_modules/vue/dist/vue.esm-browser.prod.js";
 // Howler: audio library
 import {Howl} from "../node_modules/howler/dist/howler.min.js";
 
+import {saveAs} from '../node_modules/file-saver/dist/FileSaver.min.js';
+
 import {MidiPlayer} from "./players/midi.js";
 import {WebMscorePlayer} from "./players/webmscore.js"
 import {WebMscoreLoader,WebMscoreSupported,LIB_WEBMSCORE_MAJOR} from "./loaders/webmscore.js"
@@ -36,6 +38,38 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
         sustain = false
       })
     })
+  }
+
+  //==============================================
+
+  const ExportPopup = {
+    emits: ['close', 'download'],
+    props: {
+      downloads: Object
+    },
+    setup(props, ctx) {
+      console.log(props);
+
+      function close() {
+        ctx.emit('close')
+      }
+
+      function download(element) {
+        ctx.emit('download', element)
+      }
+
+      return { close, download }
+    },
+    template: /*html*/`
+      <div class="slcwd-exports" ref="ref">
+        <button @click="close">x</button>
+        <div v-for="el of downloads">
+          <button class="slcwd-button" @click="() => download(el)">
+            {{ el.name }}
+          </button>
+        </div>
+      </div>
+    `
   }
 
   //==============================================
@@ -163,6 +197,7 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
     setup(props, ctx) {
       if (props.refPagesApi) props.refPagesApi.value = { toggleAutoScroll, toggleZoomed }
 
+      const showExportPopup = Vue.ref(false);
       const ref = Vue.ref(null)
       const zoomed = Vue.ref(false)
       function toggleZoomed() {
@@ -257,10 +292,21 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
         ctx.emit('select', ret)
       }
 
-      return { ref, innerRef, enableAutoScroll, zoomed, highlighterElid, selectElement, toggleAutoScroll, toggleZoomed }
+      function download(element) {
+        ctx.emit('download', element);
+      }
+
+      function closeExportPopup () {
+        showExportPopup.value = false;
+      }
+      function openExportPopup () {
+        showExportPopup.value = true;
+      }
+
+      return { ref, innerRef, enableAutoScroll, zoomed, highlighterElid, selectElement, toggleAutoScroll, toggleZoomed, download, openExportPopup, closeExportPopup, showExportPopup }
     },
     components: {
-      Page
+      Page, ExportPopup
     },
     template: /*html*/`
       <div class="slcwd-pages-display" ref="ref">
@@ -298,13 +344,25 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
           <i class="las la-search-plus"></i> <span class="label"><span style="text-decoration:underline">Z</span>oom</span>
         </button>
         <button
-          v-for="download in downloads"
+          v-if="downloads.length == 1"
+          @click="() => download(downloads[0])"
           class="slcwd-button"
         >
-          <a :href="download.href" download>
-            <i class="las la-file-download"></i> <span class="label">{{ download.name }}</span>
-          </a>
+            <i class="las la-file-download"></i> <span class="label">{{ downloads[0].name }}</span>
         </button>
+        <button
+          v-if="downloads.length > 1"
+          class="slcwd-button"
+          @click="openExportPopup"
+        >
+          <i class="las la-file-download"></i> <span class="label">Download</span>
+        </button>
+        <ExportPopup
+          v-if="showExportPopup"
+          :downloads=downloads
+          @close="closeExportPopup"
+          @download="download"
+        />
       </div>
     `
   }
@@ -728,11 +786,33 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
         }
       )
 
+      async function download(element) {
+        let dataLoc = element.href;
+        let filename = null; // If null, will get it from URL
+        if (dataLoc.startsWith("mscz/export:")) {
+          if (!WebMscoreSupported.includes(props.type)) {// We have no mscz source file
+            console.error("Could not save file, score is not loaded from websmcore", element);
+            return;
+          }
+          if (loader.value == null) {
+            console.error("Loader not available.");
+            return;
+          }
+
+          const exportFormat = dataLoc.split(":")[1];
+          const data = await loader.value.exportAs(exportFormat);
+          filename = `${scoreMeta.value.title}.${exportFormat}`;
+          dataLoc = new Blob([data]);
+        }
+        
+        saveAs(dataLoc, filename);
+      }
+
 
       return {
         refMain, scoreMeta, loaded, errored, graphics, positions, audioTime,
         refAudioApi, selectTimes, playPause, addProgress, refPagesApi, handleExactKey, tracks_ref, downloads,
-        errorMessage
+        errorMessage, download
       }
     },
     components: { PagesDisplay, ScorePlayback },
@@ -755,6 +835,7 @@ loadStylesheet("https://maxst.icons8.com/vue-static/landings/line-awesome/line-a
           :positions="positions"
           :audioTime="audioTime"
           @select="times => selectTimes(times)"
+          @download="download"
           :refPagesApi="refPagesApi"
         />
         <ScorePlayback

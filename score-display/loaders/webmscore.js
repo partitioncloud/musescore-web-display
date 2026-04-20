@@ -138,6 +138,25 @@ export class WebMscoreLoader {
     return await score.synthAudio(start_time);
   }
 
+  async exportAs(format) {
+    let score = await this.score;
+
+    if (format == "mscz")
+      return score.saveMsc("mscz");
+    if (format == "musicxml")
+      return score.saveXml();
+    if (format == "pdf")
+      return score.savePdf();
+    if (format == "mxl")
+      return score.saveMxl();
+    if (format == "mid")
+      return score.saveMidi();
+    if (format == "ogg")
+      return score.saveAudio("ogg");
+
+    console.error(`Unknown download format ${format}`);
+  }
+
   async destroy() {
     let score = await this.score;
     score.destroy(false);
