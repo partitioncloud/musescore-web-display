@@ -1,8 +1,8 @@
-JS_SOURCES := $(wildcard score-display/*.js score-display/**/*.js)
+JS_SOURCES := $(wildcard score-display/*.js score-display/**/*.js score-display/**/*.vue) rolldown.config.mjs
 WEBMSCORE_VERSION := 4.6.5
 WEBMSCORE_SOURCE  := https://github.com/augustin64/MuseScore/releases/download/webmscore-$(WEBMSCORE_VERSION)/webmscore4-$(WEBMSCORE_VERSION).tgz
 WEBMSCORE         := ./webmscore$(WEBMSCORE_VERSION)
-ROLLDOWN          := node_modules/.bin/rolldown --intro="const LIB_WEBMSCORE_VERSION='$(WEBMSCORE_VERSION)';"
+ROLLDOWN          := node_modules/.bin/rolldown --config rolldown.config.mjs --intro="const LIB_WEBMSCORE_VERSION='$(WEBMSCORE_VERSION)';"
 
 target: target/soundfonts/FluidR3Mono_GM.sf3 target/score-display.rolldown.js $(WEBMSCORE)
 	mkdir -p target/soundfonts
@@ -13,7 +13,7 @@ all: target pages target/score-display.rolldown.no-mm.js
 
 target/score-display.rolldown.js: node_modules $(JS_SOURCES) patches/score-display.rolldown.js.no-cdn.diff
 	mkdir -p target
-	$(ROLLDOWN) score-display/score-display.global.js --file target/score-display.rolldown.js
+	$(ROLLDOWN) --input score-display/score-display.global.js --file target/score-display.rolldown.js
 	cp target/score-display.rolldown.js target/score-display.rolldown.no-cdn.js
 	patch target/score-display.rolldown.no-cdn.js patches/score-display.rolldown.js.no-cdn.diff
 
@@ -22,7 +22,7 @@ target/score-display.rolldown.no-mm.js: node_modules $(JS_SOURCES) patches/midip
 	echo $(JS_SOURCES)
 	cp score-display/* build-no-mm/ -r
 	patch build-no-mm/players/midi.js patches/midiplayer.js.no-mm.diff
-	$(ROLLDOWN) build-no-mm/score-display.global.js --file target/score-display.rolldown.no-mm.js
+	$(ROLLDOWN) --input build-no-mm/score-display.global.js --file target/score-display.rolldown.no-mm.js
 	rm build-no-mm -rf
 	cp target/score-display.rolldown.no-mm.js target/score-display.rolldown.no-mm+no-cdn.js
 	patch target/score-display.rolldown.no-mm+no-cdn.js patches/score-display.rolldown.js.no-cdn.diff

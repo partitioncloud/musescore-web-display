@@ -1,4 +1,4 @@
-import * as mm from "../../node_modules/@magenta/music/es6/core.js";
+import * as mm from "@magenta/music";
 import {DEFAULT_SOUNDFONT} from "../config.js";
 
 /** Returns a promise that fulfills once magenta and Tone.js are loaded */
@@ -34,7 +34,7 @@ export class MidiPlayer {
   load_data(onload, onend) {
     fetch(this.src)
     .then((response) => response.blob())
-    .then((blob) => mm.blobToNoteSequence(blob))
+    .then(mm.blobToNoteSequence)
     .then((s) => {
       this.seq = s; // Used later in this.play()
       this.player = new mm.SoundFontPlayer(
