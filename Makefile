@@ -1,6 +1,6 @@
 JS_SOURCES := $(wildcard score-display/*.js score-display/**/*.js score-display/**/*.vue) rolldown.config.mjs
-WEBMSCORE_VERSION := 4.6.5
-WEBMSCORE_SOURCE  := https://github.com/augustin64/MuseScore/releases/download/webmscore-$(WEBMSCORE_VERSION)/webmscore4-$(WEBMSCORE_VERSION).tgz
+WEBMSCORE_VERSION := 4.6.5-1
+WEBMSCORE_SOURCE  := https://github.com/partitioncloud/webmscore/releases/download/webmscore-$(WEBMSCORE_VERSION)/webmscore4-$(WEBMSCORE_VERSION).tgz
 WEBMSCORE         := ./webmscore$(WEBMSCORE_VERSION)
 ROLLDOWN          := node_modules/.bin/rolldown --config rolldown.config.mjs --intro="const LIB_WEBMSCORE_VERSION='$(WEBMSCORE_VERSION)';"
 
