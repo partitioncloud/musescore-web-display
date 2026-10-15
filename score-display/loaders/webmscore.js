@@ -97,10 +97,9 @@ export class WebMscoreLoader {
       time: evt.position / 1000
     })
 
-    const events = [];
-    json_data.events.forEach((e) => {
-      events[e.elid] = event_transform(e);
-    });
+    // A measure that is played several times (repeats) has several events
+    // sharing the same elid: keep them all, in playback order.
+    const events = json_data.events.map(event_transform);
     return {
       elements: json_data.elements.map(element_transform),
       events: events
