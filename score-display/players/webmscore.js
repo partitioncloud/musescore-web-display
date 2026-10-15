@@ -18,6 +18,9 @@ export class WebMscorePlayer {
 
     this._duration = 0; // To be loaded
     this.next_seek = null; // Time to seek to on the next play() call
+    this.seek_target = 0; // Last requested time, reported until playback reaches it
+    this.seeking = false; // A seek was requested but playback did not restart yet
+    this.synth_id = 0; // Identifies the current synth run, to drop frames of older ones
     this.is_playing = false;
     this.synth_complete = false; // are all frames synthesized ?
     this.synth_running = false;
@@ -115,6 +118,7 @@ export class WebMscorePlayer {
 
   async synthAudioToQueue(start = 0) {
     let score = await this.mscz.score;
+    const id = ++this.synth_id;
     const fn = await score.synthAudio(start);
     this.stopSynth = (async () => await fn(false));
     this.synth_running = true;
@@ -122,6 +126,8 @@ export class WebMscorePlayer {
     this.BUFFER_QUEUE = [];
     for (;;) {
       const res = await fn();
+      if (id !== this.synth_id) return; // Outdated by a seek: its frames are stale
+
       const frames = new Float32Array(res.chunk.buffer);
 
       // Extract per-channel buffers
@@ -161,6 +167,7 @@ export class WebMscorePlayer {
       this.synthAudioToQueue(start_time); // synth in the background
 
       this.next_seek = null;
+      this.seeking = false;
     }
 
     this.is_playing = true;
@@ -188,11 +195,16 @@ export class WebMscorePlayer {
     // if time is undefined, returns the current seek
     // else, seeks to the specified time
     if (time === undefined) {
-      if (!this.is_playing && this.next_seek !== null)
-        return this.next_seek;
+      // Until playback restarts, `currentTime` is outdated: report the requested time
+      if (this.seeking) return this.seek_target;
 
-      return Math.min(this.currentTime, this.duration());
+      // Playback starts a bit before the requested time, but this is not reported
+      return Math.min(Math.max(this.currentTime, this.seek_target), this.duration());
     }
+
+    this.seek_target = time;
+    this.seeking = true;
+    this.synth_id++; // Frames still being synthesized are now stale
 
     // We want to start ON the selected note, so we seek a bit earlier
     time = Math.max(time-0.01, 0);
