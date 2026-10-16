@@ -1,5 +1,5 @@
 <template>
-  <div class="slcwd-mixer">
+  <div class="slcwd-mixer" @keydown.stop> <!-- keep arrows/space for the sliders and buttons -->
     <TrackMixer
       :trackAudioParams="audioParams.master"
       trackName="Master"
