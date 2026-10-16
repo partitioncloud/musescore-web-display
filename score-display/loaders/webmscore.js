@@ -119,15 +119,20 @@ export class WebMscoreLoader {
   }
 
   async setSoundFont() {
-    let score = await this.score;
+    if (typeof this.loadSoundfont == 'undefined')
+      this.loadSoundfont = (async () => {
+        let score = await this.score;
 
-    const soundFontData = new Uint8Array(
-      await (
-        await fetch('https://cdn.jsdelivr.net/gh/musescore/MuseScore@2.1/share/sound/FluidR3Mono_GM.sf3')
-        // TODO: get soundfont URL from options, compare this one with Magenta default one for default
-      ).arrayBuffer()
-    )
-    await score.setSoundFont(soundFontData);
+        const soundFontData = new Uint8Array(
+          await (
+            await fetch('https://cdn.jsdelivr.net/gh/musescore/MuseScore@2.1/share/sound/FluidR3Mono_GM.sf3')
+            // TODO: get soundfont URL from options, compare this one with Magenta default one for default
+          ).arrayBuffer()
+        )
+        await score.setSoundFont(soundFontData);
+      })();
+
+    await this.loadSoundfont;
   }
 
   async synthAudio(start_time) {
@@ -159,5 +164,19 @@ export class WebMscoreLoader {
   async destroy() {
     let score = await this.score;
     score.destroy(false);
+  }
+
+  async getAudioOutputParams() {
+    let score = await this.score;
+
+    await this.setSoundFont();
+    return await score.getAudioOutputParams();
+  }
+
+  async setAudioOutputParams(params) {
+    let score = await this.score;
+
+    await this.setSoundFont();
+    await score.setAudioOutputParams(params);
   }
 }

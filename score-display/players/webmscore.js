@@ -29,7 +29,7 @@ export class WebMscorePlayer {
     this.CHANNELS = 2
     this.FRAME_LENGTH = 512;
     this.BUFFER_QUEUE = [];
-    this.BUFFER_WAIT_LENGTH = 64;
+    this.BUFFER_WAIT_LENGTH = 64; //TODO something to think there
 
     this.audioCtx = new (AudioContext || webkitAudioContext)({latencyHint: "interactive"});
     this.currentTime = 0;
@@ -118,9 +118,13 @@ export class WebMscorePlayer {
 
   async synthAudioToQueue(start = 0) {
     let score = await this.mscz.score;
+    let synthStopped = false;
     const id = ++this.synth_id;
     const fn = await score.synthAudio(start);
-    this.stopSynth = (async () => await fn(false));
+    this.stopSynth = (async () => {
+      synthStopped = true;
+      await fn(false);
+    });
     this.synth_running = true;
 
     this.BUFFER_QUEUE = [];
@@ -143,6 +147,7 @@ export class WebMscorePlayer {
         startTime: res.startTime
       });
 
+      if (synthStopped) break;
       if (res.done) {
         this.synth_complete = true
         break;
@@ -222,5 +227,16 @@ export class WebMscorePlayer {
       if (this.is_playing)
         this.play(); // Re-start synthesizing
     })()
+  }
+
+  async getAudioOutputParams() {
+    let score = await this.mscz;
+    return await score.getAudioOutputParams();
+  }
+
+  async setAudioOutputParams(patch) {
+    let score = await this.mscz;
+    await score.setAudioOutputParams(patch);
+    this.seek(this.seek() + 0.01); // Clear current buffer queue
   }
 }

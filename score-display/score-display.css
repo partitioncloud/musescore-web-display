@@ -140,6 +140,7 @@
   background: white;
   height: 40px;
   display: flex;
+  position: relative; /* anchors the mixer panel */
 }
 
 .slcwd-playback-button {
@@ -255,10 +256,83 @@
 }
 
 @keyframes slcwd-spin {
-    from {
-        transform:rotate(0deg);
-    }
-    to {
-        transform:rotate(360deg);
-    }
+  from {
+    transform:rotate(0deg);
+  }
+  to {
+    transform:rotate(360deg);
+  }
+}
+
+.slcwd-mixer {
+  display: none;
+
+  /* Side panel docked to the right end of the playback bar, opening upwards */
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: min(280px, 100%);
+  max-height: min(70vh, 480px);
+  box-sizing: border-box;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  z-index: 2;
+
+  background-color: white;
+  box-shadow: rgba(17, 17, 26, 0.05) 0px 4px 16px, rgba(17, 17, 26, 0.05) 0px 8px 32px;
+  border: 1px solid #ccc;
+  padding: 4px 12px;
+}
+
+.slcwd-mixer[visible=true] {
+  display: block;
+}
+
+.slcwd-track-mixer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+/* Master stays visible while scrolling through the tracks */
+.slcwd-track-mixer:first-child {
+  position: sticky;
+  top: -4px;
+  background-color: white;
+  border-bottom: 1px solid #ccc;
+  font-weight: bold;
+}
+
+.slcwd-track-name {
+  flex: 0 0 80px;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9em;
+}
+
+.slcwd-track-mixer > input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.slcwd-track-mixer-buttons {
+  display: flex;
+  gap: 2px;
+}
+
+.slcwd-track-mixer-buttons > button {
+  background-color: #d8d8d8;
+  border: none;
+  border-radius: 3px;
+  width: 24px;
+  height: 24px;
+}
+
+.slcwd-track-mixer-buttons > button[active="true"] {
+  background-color: #3584e4;
+  color: white;
 }

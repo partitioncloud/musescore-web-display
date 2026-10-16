@@ -15,12 +15,27 @@
     >
         <i class="las la-stop"></i>
     </button>
+    <button
+      v-if="audioParams != null"
+      @click="toggleMixer"
+      @update-params="handleMixerParamsUpdate"
+      :class="['slcwd-button', 'slcwd-playback-button', 'slcwd-mixer-btn', { active: showMixer }]"
+      title="Audio Mixer"
+    >
+        <i class="las la-sliders-h"></i>
+    </button>
     <button class="slcwd-button" @click="nextTrack">
         {{ currentTrack.name }}
     </button>
     <div class="slcwd-playback-tooltip">
         {{ trackNamesTooltip }}
     </div>
+    <PlaybackMixer
+      v-if="audioParams != null"
+      :visible="showMixer"
+      :audioParams="audioParams"
+      @update-params="handleMixerParamsUpdate"
+    />
     <div class="slcwd-playback-progress">
         <div
           ref="progressbar"
@@ -46,9 +61,13 @@ import {useFrameEffect} from "../utils.js";
 
 import {Howl} from "howler"; // Howler: audio library
 import {MidiPlayer} from "../players/midi.js";
-import {WebMscorePlayer} from "../players/webmscore.js"
+import {WebMscorePlayer} from "../players/webmscore.js";
+import PlaybackMixer from "./PlaybackMixer.vue";
 
 export default {
+    components: {
+        PlaybackMixer,
+    },
     props: {
         tracks: Array, // [{ name, src, type:("midi", "audio" or "mscz/..."), soundfont (for midi) }]
         type: String, // file ext of the score
@@ -68,6 +87,8 @@ export default {
         const currentTrack = Vue.computed(() =>
             props.tracks[currentTrackIndex.value] ?? null
         );
+        const showMixer = Vue.ref(false);
+        const audioParams = Vue.ref(null);
         function nextTrack() {
             if (currentTrack.value.type == "mscz/synth") {
                 audio.value.destroy();
@@ -78,6 +99,7 @@ export default {
         const loaded = Vue.ref(false);
         const audio = Vue.computed((old_audio) => {
             loaded.value = false
+            showMixer.value = false; // Close mixer when track changes
 
             const thisIndex = currentTrackIndex.value;
 
@@ -127,6 +149,12 @@ export default {
             }
 
             const self = new Constructor(options);
+
+            if (self.getAudioOutputParams)
+                (async () => {
+                    audioParams.value = await self.getAudioOutputParams();
+                })();
+
             return self;
         })
 
@@ -234,10 +262,32 @@ export default {
             props.tracks.map(t => t.name).join('\n')
         );
 
+        function toggleMixer() {
+            showMixer.value = !showMixer.value;
+        }
+
+        function handleMixerParamsUpdate(patch) {
+            // Updates webmscore audio params & clears queue
+            audio.value.setAudioOutputParams(patch);
+
+            // Update PlaybackMixer params
+            audioParams.value = {
+                master: {
+                    ...audioParams.value.master,
+                    ...(patch.master || {}),
+                },
+                tracks: audioParams.value.tracks.map(track => {
+                    const updatedTrack = patch.tracks?.find(t => t.trackId === track.trackId);
+                    return updatedTrack ? {...track, ...updatedTrack} : track;
+                })
+            }
+        }
+
         return {
             loaded, audio, progressbar, playPause, stop, isPlaying,
             progressRatio, loadedRatio, addProgress, progressMouseDown,
-            nextTrack, currentTrack, trackNamesTooltip
+            nextTrack, currentTrack, trackNamesTooltip, showMixer,
+            toggleMixer, handleMixerParamsUpdate, audioParams
         }
     },
 }
