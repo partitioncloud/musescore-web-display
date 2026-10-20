@@ -1,5 +1,13 @@
 .slcwd-score-display {
   outline: none;
+  position: relative; /* the playback bar and page controls float inside it */
+  display: flex; /* the pages display takes all the height */
+  flex-direction: column;
+}
+
+/* Default size, easy to override: the pages adapt to the size of the container */
+:where(.slcwd-score-display) {
+  height: calc(min(75vh, 130vw) + 125px);
 }
 
 .slcwd-button {
@@ -65,13 +73,17 @@
 }
 
 .slcwd-pages-display {
-  height: min(75vh, 130vw);
+  flex: 1;
+  min-height: 0;
   position: relative;
   display: flex;
   justify-content: center;
 }
 
 .slcwd-pages-display-i {
+  /* The score scrolls behind the floating bars, but rests clear of them */
+  padding: 50px 25px 75px; /* room for the page controls, and for the playback bar */
+  box-sizing: border-box;
   height: 100%;
   overflow-x: auto;
   white-space: nowrap;
@@ -83,15 +95,21 @@
   background: white;
   padding: 16px;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 125px); /* leaves room for the floating bars */
+  margin-top: 50px;
   box-sizing: border-box;
   text-align: center;
+}
+
+.slcwd-pages-display.zoomed > .slcwd-pages-display-i {
+  overflow-y: auto; /* the pages are taller than the container */
 }
 
 .slcwd-page {
   flex-grow: 0;
   flex-shrink: 0;
-  height: calc(100% - 2px);
+  /* Normal mode: as high as the container. Zoomed: --slcwd-page-height is set by PagesDisplay */
+  height: var(--slcwd-page-height, calc(100% - 2px));
   border: 1px solid #ccc;
   background: white;
   box-sizing: content-box;
@@ -123,9 +141,13 @@
 }
 
 .slcwd-pages-controls {
-  margin-top: 12px;
   z-index: 1;
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  box-shadow: rgba(0, 0, 0, 0.1) -4px 9px 25px -6px;
 }
 
 .slcwd-pages-controls>button {
@@ -135,27 +157,62 @@
 }
 
 .slcwd-playback-controls {
-  margin-top: -.5px;
   border: 1px solid #ccc;
+  border-radius: 24px;
   background: white;
   height: 40px;
+  width: calc(max(75%, 400px));
+  max-width: 100%;
   display: flex;
+  position: absolute; /* also anchors the mixer panel */
+  bottom: 25px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: rgba(0, 0, 0, 0.15) 0px 15px 25px, rgba(0, 0, 0, 0.05) 0px 5px 10px;
 }
 
 .slcwd-playback-button {
-  flex-basis: 40px;
+  border-radius: 51px;
+  margin: 3px 0px;
+}
+
+.slcwd-playback-button:hover {
+  background: #0067B8 !important; /* white text on it has a 5.8:1 contrast ratio */
+  color: white;
+}
+
+.slcwd-playback-button.active {
+  background: #111;
+  color: #f9f9f9;
+}
+
+.slcwd-pause {
+  margin-left: 4px;
 }
 
 .slcwd-playback-progress {
   flex: 1;
   width: 0;
   padding: 12px;
+  cursor: pointer;
+  touch-action: none; /* dragging must not scroll the page */
+}
+
+.slcwd-playback-time {
+  align-self: center;
+  padding-right: 18px;
+  font-size: 0.8em;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .slcwd-playback-progressbar {
   position: relative;
   background: #eee;
-  height: 100%;
+  height: 5px;
+  margin-top: 6px;
+  margin-right: 15px;
 }
 
 .slcwd-playback-progressbar-l {
@@ -167,32 +224,62 @@
 
 .slcwd-playback-progressbar-i {
   position: absolute;
-  background-color: #111;
+  background-color: #0098FF;
   height: 100%;
   width: 0%;
 }
 
-.slcwd-playback-tooltip {
+.slcwd-track-picker {
+  position: relative;
+  display: flex;
+}
+
+.slcwd-track-button {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slcwd-track-button .las {
+  font-size: 12px;
+  margin-left: 2px;
+}
+
+.slcwd-track-button[aria-expanded="true"] .las {
+  transform: rotate(180deg);
+}
+
+.slcwd-track-label {
+  align-self: center;
+  padding: 0 12px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slcwd-track-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 2;
+  min-width: 100%;
+  max-height: min(50vh, 320px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+
   background-color: white;
   box-shadow: rgba(17, 17, 26, 0.05) 0px 4px 16px, rgba(17, 17, 26, 0.05) 0px 8px 32px;
   border: 1px solid #ccc;
   border-radius: 12px;
-
-  padding: 12px;
-  position: absolute;
-  transform: translateX(78px) translateY(-100%);
-
-  white-space: preserve-breaks;
-  z-index: 2;
-  display: none;
 }
 
-.slcwd-playback-tooltip:hover {
-  display: unset;
-}
-
-.slcwd-button:hover+.slcwd-playback-tooltip {
-  display: unset;
+.slcwd-track-menu > .slcwd-button {
+  padding: 10px 16px;
+  text-align: left;
+  white-space: nowrap;
 }
 
 .slcwd-exports {
@@ -255,10 +342,113 @@
 }
 
 @keyframes slcwd-spin {
-    from {
-        transform:rotate(0deg);
-    }
-    to {
-        transform:rotate(360deg);
-    }
+  from {
+    transform:rotate(0deg);
+  }
+  to {
+    transform:rotate(360deg);
+  }
+}
+
+.slcwd-mixer {
+  display: none;
+
+  /* Side panel docked to the right end of the playback bar, opening upwards */
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: min(280px, 100%);
+  max-height: min(70vh, 480px);
+  box-sizing: border-box;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  z-index: 2;
+
+  background-color: white;
+  box-shadow: rgba(17, 17, 26, 0.05) 0px 4px 16px, rgba(17, 17, 26, 0.05) 0px 8px 32px;
+  border: 1px solid #ccc;
+  padding: 4px 12px;
+}
+
+.slcwd-mixer[visible=true] {
+  display: block;
+}
+
+.slcwd-track-mixer {
+  display: grid;
+  grid-template-areas:
+    "name db buttons"
+    "slider slider slider";
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 8px 0;
+}
+
+/* Master stays visible while scrolling through the tracks */
+.slcwd-track-mixer:first-child {
+  position: sticky;
+  top: -4px;
+  background-color: white;
+  border-bottom: 1px solid #ccc;
+  font-weight: bold;
+}
+
+.slcwd-track-name {
+  grid-area: name;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9em;
+}
+
+.slcwd-track-mixer > input {
+  grid-area: slider;
+  min-width: 0;
+  margin: 0;
+}
+
+.slcwd-track-db {
+  grid-area: db;
+  font-size: 0.8em;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+}
+
+.slcwd-track-mixer-buttons {
+  grid-area: buttons;
+  display: flex;
+  gap: 2px;
+}
+
+.slcwd-track-mixer-buttons > button {
+  background-color: #d8d8d8;
+  border: none;
+  border-radius: 3px;
+  width: 24px;
+  height: 24px;
+}
+
+.slcwd-track-mixer-buttons > button[active="true"] {
+  background-color: #3584e4;
+  color: white;
+}
+
+/* Narrow screens: popups use the whole width of the playback bar, labels give way to icons */
+@media (max-width: 600px) {
+  .slcwd-playback-controls {
+    bottom: 12px;
+  }
+
+  .slcwd-mixer {
+    left: 0;
+    right: 0;
+    width: auto;
+    max-height: 50vh;
+  }
+
+  .slcwd-pages-controls .label {
+    display: none;
+  }
 }

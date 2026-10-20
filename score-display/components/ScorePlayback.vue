@@ -1,5 +1,5 @@
 <template>
-<div class="slcwd-playback-controls">
+<div class="slcwd-playback-controls" ref="rootEl">
     <button
       @click="playPause"
       :disabled="!loaded"
@@ -15,17 +15,53 @@
     >
         <i class="las la-stop"></i>
     </button>
-    <button class="slcwd-button" @click="nextTrack">
-        {{ currentTrack.name }}
+    <button
+      v-if="audioParams != null"
+      @click="toggleMixer"
+      :class="['slcwd-button', 'slcwd-playback-button', 'slcwd-mixer-btn', { active: showMixer }]"
+      :aria-pressed="showMixer"
+      aria-label="Audio mixer"
+      title="Audio mixer"
+    >
+        <i class="las la-sliders-h"></i>
     </button>
-    <div class="slcwd-playback-tooltip">
-        {{ trackNamesTooltip }}
+    <!-- With a single track there is nothing to choose: show its name only -->
+    <span v-if="tracks.length < 2" class="slcwd-track-label">{{ currentTrack.name }}</span>
+    <div v-else class="slcwd-track-picker">
+        <button
+          class="slcwd-button slcwd-track-button"
+          @click="toggleTrackMenu"
+          aria-haspopup="listbox"
+          :aria-expanded="showTrackMenu"
+          title="Choose the track to play"
+        >
+            {{ currentTrack.name }} <i class="las la-angle-up"></i>
+        </button>
+        <div v-if="showTrackMenu" class="slcwd-track-menu" role="listbox">
+            <button
+              v-for="(track, index) in tracks"
+              :key="index"
+              class="slcwd-button"
+              role="option"
+              :aria-selected="index == currentTrackIndex"
+              :selected="index == currentTrackIndex ? '' : null"
+              @click="selectTrack(index)"
+            >
+                {{ track.name }}
+            </button>
+        </div>
     </div>
-    <div class="slcwd-playback-progress">
+    <PlaybackMixer
+      v-if="audioParams != null"
+      :visible="showMixer"
+      :audioParams="audioParams"
+      @update-params="handleMixerParamsUpdate"
+    />
+    <!-- The whole area is clickable, the bar itself is only 5px high -->
+    <div class="slcwd-playback-progress" @pointerdown.prevent="progressPointerDown">
         <div
           ref="progressbar"
           class="slcwd-playback-progressbar"
-          @mousedown.prevent="progressMouseDown"
         >
         <div class="slcwd-playback-progressbar-l" :style="{
             width: loadedRatio * 100 + '%'
@@ -35,6 +71,7 @@
         }"></div>
         </div>
     </div>
+    <span class="slcwd-playback-time">{{ timeLabel }}</span>
 </div>
 </template>
 
@@ -46,9 +83,13 @@ import {useFrameEffect} from "../utils.js";
 
 import {Howl} from "howler"; // Howler: audio library
 import {MidiPlayer} from "../players/midi.js";
-import {WebMscorePlayer} from "../players/webmscore.js"
+import {WebMscorePlayer} from "../players/webmscore.js";
+import PlaybackMixer from "./PlaybackMixer.vue";
 
 export default {
+    components: {
+        PlaybackMixer,
+    },
     props: {
         tracks: Array, // [{ name, src, type:("midi", "audio" or "mscz/..."), soundfont (for midi) }]
         type: String, // file ext of the score
@@ -68,16 +109,25 @@ export default {
         const currentTrack = Vue.computed(() =>
             props.tracks[currentTrackIndex.value] ?? null
         );
-        function nextTrack() {
+        const showMixer = Vue.ref(false);
+        const audioParams = Vue.ref(null);
+        const showTrackMenu = Vue.ref(false);
+        function selectTrack(index) {
+            showTrackMenu.value = false;
+            if (index == currentTrackIndex.value) return;
             if (currentTrack.value.type == "mscz/synth") {
                 audio.value.destroy();
             }
-            currentTrackIndex.value = (currentTrackIndex.value+1)% props.tracks.length;
+            currentTrackIndex.value = index;
+        }
+        function nextTrack() {
+            selectTrack((currentTrackIndex.value+1)% props.tracks.length);
         }
 
         const loaded = Vue.ref(false);
         const audio = Vue.computed((old_audio) => {
             loaded.value = false
+            showMixer.value = false; // Close mixer when track changes
 
             const thisIndex = currentTrackIndex.value;
 
@@ -127,6 +177,12 @@ export default {
             }
 
             const self = new Constructor(options);
+
+            if (self.getAudioOutputParams)
+                (async () => {
+                    audioParams.value = await self.getAudioOutputParams();
+                })();
+
             return self;
         })
 
@@ -134,6 +190,17 @@ export default {
         const isPlaying = Vue.ref(false);
         const progressRatio = Vue.ref(0);
         const loadedRatio = Vue.ref(0)
+        const elapsed = Vue.ref(0);
+        const duration = Vue.ref(0);
+
+        function formatTime(seconds) {
+            if (!Number.isFinite(seconds)) return '0:00';
+            const total = Math.floor(seconds);
+            return Math.floor(total / 60) + ':' + String(total % 60).padStart(2, '0');
+        }
+        const timeLabel = Vue.computed(() =>
+            `${formatTime(elapsed.value)} / ${formatTime(duration.value)}`
+        );
 
         function reportCurrent() {
             if (!audio.value) {
@@ -152,11 +219,14 @@ export default {
             if(!loaded.value) return  // Only update state when loaded
 
             isPlaying.value = audio.value.playing()
+            elapsed.value = audio.value.seek();
+            duration.value = audio.value.duration();
             if(audio.value.duration() != 0)
                 progressRatio.value = audio.value.seek() / audio.value.duration();
         })
 
         Vue.onUnmounted(() => {
+            setPopupCloseListeners(false);
             stop();
             if (currentTrack.value.type == "mscz/synth") {
                 audio.value.destroy();
@@ -209,7 +279,7 @@ export default {
                 setProgress(currentTime)
             }
         }
-        function progressMouseDown(event) {
+        function progressPointerDown(event) {
             ctx.emit('focusMain')
             if (!audio.value) {
                 return
@@ -219,25 +289,71 @@ export default {
             if (wasPlaying) {
                 audio.value.pause()
             }
-            document.addEventListener('mousemove', tweakProgressOnBar)
+            document.addEventListener('pointermove', tweakProgressOnBar)
             function cleanup() {
-                document.removeEventListener('mousemove', tweakProgressOnBar)
-                document.removeEventListener('mouseup', cleanup)
+                document.removeEventListener('pointermove', tweakProgressOnBar)
+                document.removeEventListener('pointerup', cleanup)
+                document.removeEventListener('pointercancel', cleanup)
                 if (wasPlaying && audio.value.seek() < audio.value.duration()) {
                     audio.value.play()
                 }
             }
-            document.addEventListener('mouseup', cleanup)
+            document.addEventListener('pointerup', cleanup)
+            document.addEventListener('pointercancel', cleanup)
         }
 
-        const trackNamesTooltip = Vue.computed(() =>
-            props.tracks.map(t => t.name).join('\n')
-        );
+        function toggleMixer() {
+            showTrackMenu.value = false;
+            showMixer.value = !showMixer.value;
+        }
+        function toggleTrackMenu() {
+            showMixer.value = false;
+            showTrackMenu.value = !showTrackMenu.value;
+        }
+
+        // Close the popups with Escape or by clicking anywhere outside of the playback bar
+        const rootEl = Vue.ref(null);
+        function closePopups() {
+            showMixer.value = false;
+            showTrackMenu.value = false;
+        }
+        function closeOnEscape(event) {
+            if (event.key == 'Escape') closePopups();
+        }
+        function closeOnOutsideClick(event) {
+            if (rootEl.value && !rootEl.value.contains(event.target)) closePopups();
+        }
+        function setPopupCloseListeners(enabled) {
+            const method = enabled ? 'addEventListener' : 'removeEventListener';
+            // Capture phase, as the mixer stops keyboard events from bubbling
+            document[method]('keydown', closeOnEscape, true);
+            document[method]('pointerdown', closeOnOutsideClick, true);
+        }
+        Vue.watch(() => showMixer.value || showTrackMenu.value, setPopupCloseListeners);
+
+        function handleMixerParamsUpdate(patch) {
+            // Updates webmscore audio params & clears queue
+            audio.value.setAudioOutputParams(patch);
+
+            // Update PlaybackMixer params
+            audioParams.value = {
+                master: {
+                    ...audioParams.value.master,
+                    ...(patch.master || {}),
+                },
+                tracks: audioParams.value.tracks.map(track => {
+                    const updatedTrack = patch.tracks?.find(t => t.trackId === track.trackId);
+                    return updatedTrack ? {...track, ...updatedTrack} : track;
+                })
+            }
+        }
 
         return {
             loaded, audio, progressbar, playPause, stop, isPlaying,
-            progressRatio, loadedRatio, addProgress, progressMouseDown,
-            nextTrack, currentTrack, trackNamesTooltip
+            progressRatio, loadedRatio, addProgress, progressPointerDown, timeLabel,
+            nextTrack, currentTrack, currentTrackIndex, selectTrack, showMixer,
+            showTrackMenu, toggleTrackMenu, toggleMixer, handleMixerParamsUpdate,
+            audioParams, rootEl
         }
     },
 }

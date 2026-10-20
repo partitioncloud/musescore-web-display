@@ -143,7 +143,7 @@ def generate_audio(source_file, dest) -> List[str]:
         }] + [{
             "in": file,
             "out": [os.path.join(dest, os.path.basename(file)+".ogg")]
-        } for file in generate_separated_midi(source_file, tmp_dir.name)]
+        } for file in generate_separated_midi(source_file, dest)]
 
     with tempfile.NamedTemporaryFile('w', delete_on_close=False, suffix=".json") as fp:
         json.dump(job_config, fp)

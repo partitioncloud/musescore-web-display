@@ -5,3 +5,7 @@ target
 pages
 build-no-mm
 *.sf3
+
+data
+web-example
+index-copy.html
