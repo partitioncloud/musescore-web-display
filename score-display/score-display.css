@@ -1,7 +1,13 @@
 .slcwd-score-display {
   outline: none;
   position: relative; /* the playback bar and page controls float inside it */
-  display: flow-root; /* keeps the pages display margins inside the container */
+  display: flex; /* the pages display takes all the height */
+  flex-direction: column;
+}
+
+/* Default size, easy to override: the pages adapt to the size of the container */
+:where(.slcwd-score-display) {
+  height: calc(min(75vh, 130vw) + 125px);
 }
 
 .slcwd-button {
@@ -67,16 +73,17 @@
 }
 
 .slcwd-pages-display {
-  height: min(75vh, 130vw);
-  margin-top: 50px; /* room for the floating page controls */
-  margin-bottom: 75px; /* room for the floating playback bar */
+  flex: 1;
+  min-height: 0;
   position: relative;
   display: flex;
   justify-content: center;
 }
 
 .slcwd-pages-display-i {
-  padding: 0 25px;
+  /* The score scrolls behind the floating bars, but rests clear of them */
+  padding: 50px 25px 75px; /* room for the page controls, and for the playback bar */
+  box-sizing: border-box;
   height: 100%;
   overflow-x: auto;
   white-space: nowrap;
@@ -88,15 +95,21 @@
   background: white;
   padding: 16px;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 125px); /* leaves room for the floating bars */
+  margin-top: 50px;
   box-sizing: border-box;
   text-align: center;
+}
+
+.slcwd-pages-display.zoomed > .slcwd-pages-display-i {
+  overflow-y: auto; /* the pages are taller than the container */
 }
 
 .slcwd-page {
   flex-grow: 0;
   flex-shrink: 0;
-  height: calc(100% - 2px);
+  /* Normal mode: as high as the container. Zoomed: --slcwd-page-height is set by PagesDisplay */
+  height: var(--slcwd-page-height, calc(100% - 2px));
   border: 1px solid #ccc;
   background: white;
   box-sizing: content-box;

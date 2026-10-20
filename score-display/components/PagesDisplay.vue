@@ -1,5 +1,5 @@
 <template>
-<div class="slcwd-pages-display" ref="ref">
+<div class="slcwd-pages-display" :class="{ zoomed }" ref="ref">
     <div class="slcwd-pages-display-error" v-if="errored">
         <div style="font-size: 64px; opacity: 0.37;"><i class="las la-exclamation-circle"></i></div>
         <p>Failed to load the score.</p>
@@ -98,17 +98,19 @@ export default {
         }
         const innerRef = Vue.ref(null)
 
+        // Normal mode: the pages are as high as the display (see CSS).
+        // Zoomed: the pages are as wide as the display, so they are higher than it
         useFrameEffect(function () {
-            if (!ref.value) return
-            let newHeight = 0
+            if (!ref.value || !innerRef.value || !props.pageFormat) return
+            let pageHeight = ''
             if (zoomed.value) {
-                newHeight = Math.min(1350, ref.value.offsetWidth * 1.45)
-            } else {
-                newHeight = Math.min(1200, window.innerHeight - 160, ref.value.offsetWidth * 1.3)
+                const style = getComputedStyle(innerRef.value)
+                const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+                const pageWidth = ref.value.clientWidth - padding
+                pageHeight = pageWidth * props.pageFormat.height / props.pageFormat.width + 2 + 'px'
             }
-                newHeight = newHeight + 'px'
-            if (ref.value.style.height != newHeight) {
-                ref.value.style.height = newHeight
+            if (innerRef.value.style.getPropertyValue('--slcwd-page-height') != pageHeight) {
+                innerRef.value.style.setProperty('--slcwd-page-height', pageHeight)
             }
         })
 
