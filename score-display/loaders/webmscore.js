@@ -4,8 +4,8 @@
 // - Served at https://cdn.jsdelivr.net/npm/webmscore/webmscore.mjs
 // From https://github.com/CarlGao4/webmscore:
 // - supports MuseScore v4.3.2, see PR#1
-// From https://github.com/augustin64/MuseScore:
-// - supports MuseScore v4.6.5
+// From https://github.com/partitioncloud/webmscore:
+// - supports MuseScore v4.7.5
 const LIB_WEBMSCORE = "../webmscore/webmscore.mjs";
 // LIB_WEBMSCORE_VERSION is defined by rolldown in the Makefile
 export const LIB_WEBMSCORE_MAJOR = (

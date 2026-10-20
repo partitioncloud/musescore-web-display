@@ -81,7 +81,7 @@ Your component will look like that:
 </score-display>
 ```
 
-Unfortunately, this requires an up-to-date version of webmscore, and recent versions of MuseScore aren't always supported (currently, supports v4.6.5).
+Unfortunately, this requires an up-to-date version of webmscore, and recent versions of MuseScore aren't always supported (currently, supports v4.7.5).
 
 
 ### Integrating into existing HTML
