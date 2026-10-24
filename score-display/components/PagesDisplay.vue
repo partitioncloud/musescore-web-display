@@ -18,35 +18,49 @@
         />
     </div>
 </div>
-<div class="slcwd-pages-controls slcwd-button-group">
-    <button
-      @click="toggleAutoScroll"
-      :selected="enableAutoScroll ? '' : null"
-      class="slcwd-button"
-    >
-        <i class="las la-arrows-alt-h"></i> <span class="label">Auto-<span style="text-decoration:underline">s</span>croll</span>
-    </button>
-    <button
-      @click="toggleZoomed"
-      :selected="zoomed ? '' : null"
-      class="slcwd-button"
-    >
-        <i class="las la-search-plus"></i> <span class="label"><span style="text-decoration:underline">Z</span>oom</span>
-    </button>
-    <button
-      v-if="downloads.length == 1"
-      @click="() => download(downloads[0], () => {}, () => {})"
-      class="slcwd-button"
-    >
-        <i class="las la-file-download"></i> <span class="label">{{ downloads[0].name }}</span>
-    </button>
-    <button
-      v-if="downloads.length > 1"
-      class="slcwd-button"
-      @click="openExportPopup"
-    >
-        <i class="las la-file-download"></i> <span class="label">Download</span>
-    </button>
+<div class="slcwd-pages-controls">
+    <div v-if="views.length > 1" class="slcwd-button-group" role="tablist">
+        <button
+          v-for="(view, index) in views"
+          @click="() => $emit('viewChange', index)"
+          :aria-selected="index == viewIndex ? 'true' : 'false'"
+          :title="view.name"
+          role="tab"
+          class="slcwd-button slcwd-view-button"
+        >
+            <span>{{ view.name }}</span>
+        </button>
+    </div>
+    <div class="slcwd-button-group">
+        <button
+          @click="toggleAutoScroll"
+          :selected="enableAutoScroll ? '' : null"
+          class="slcwd-button"
+        >
+            <i class="las la-arrows-alt-h"></i> <span class="label">Auto-<span style="text-decoration:underline">s</span>croll</span>
+        </button>
+        <button
+          @click="toggleZoomed"
+          :selected="zoomed ? '' : null"
+          class="slcwd-button"
+        >
+            <i class="las la-search-plus"></i> <span class="label"><span style="text-decoration:underline">Z</span>oom</span>
+        </button>
+        <button
+          v-if="downloads.length == 1"
+          @click="() => download(downloads[0], () => {}, () => {})"
+          class="slcwd-button"
+        >
+            <i class="las la-file-download"></i> <span class="label">{{ downloads[0].name }}</span>
+        </button>
+        <button
+          v-if="downloads.length > 1"
+          class="slcwd-button"
+          @click="openExportPopup"
+        >
+            <i class="las la-file-download"></i> <span class="label">Download</span>
+        </button>
+    </div>
 </div>
 <ExportPopup
   v-show="showExportPopup"
@@ -73,9 +87,11 @@ import Page from "./Page.vue";
  * - The `positions` is the json Object defining the positions of measures or note events.
  * - The `current` is the current playback time, in seconds.
  * - `@select` emits with all the matching timestamps in seconds when the user clicks on a measure.
+ * - The `views` ({ name }) the pages can be displayed from, the displayed one being `viewIndex`.
+ *   If there are several, the user can pick one, `@viewChange` emits with its index.
  */
 export default {
-    emits: ['select'],
+    emits: ['select', 'viewChange'],
     props: {
         loaded: Boolean,
         errored: Boolean,
@@ -85,7 +101,9 @@ export default {
         positions: [null, Object],
         audioTime: [null, Number],
         refPagesApi: [null, Object],
-        downloads: [null, Array]
+        downloads: [null, Array],
+        views: { type: Array, default: () => [] },
+        viewIndex: { type: Number, default: 0 }
     },
     setup(props, ctx) {
         if (props.refPagesApi) props.refPagesApi.value = { toggleAutoScroll, toggleZoomed }

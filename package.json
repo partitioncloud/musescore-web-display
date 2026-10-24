@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@vue/compiler-sfc": "^3.5.31",
+    "pdfjs-dist": "6.4.299",
     "rolldown": "^1.0.0-rc.12",
     "unplugin-vue": "^7.0.0"
   }

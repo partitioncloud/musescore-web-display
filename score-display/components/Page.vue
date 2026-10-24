@@ -41,12 +41,11 @@ export default {
         elementsDict: Object,
     },
     setup(props, ctx) {
-        const pageFormat = props.pageFormat
         const ref = Vue.ref(null)
 
         useFrameEffect(() => {
             if (!ref.value) return
-            const newWidth = (ref.value.clientHeight - 2) * pageFormat.width / pageFormat.height + 'px'
+            const newWidth = (ref.value.clientHeight - 2) * props.pageFormat.width / props.pageFormat.height + 'px'
             if (ref.value.style.width != newWidth) {
                 ref.value.style.width = newWidth
                 ref.value.style.fontSize = newWidth

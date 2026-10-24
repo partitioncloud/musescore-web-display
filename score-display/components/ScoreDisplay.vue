@@ -19,6 +19,9 @@
       @select="times => selectTimes(times)"
       @download="download"
       :refPagesApi="refPagesApi"
+      :views="views"
+      :viewIndex="viewIndex"
+      @viewChange="index => viewIndex = index"
     />
     <ScorePlayback
       v-if="tracks_ref.length"
@@ -39,6 +42,7 @@ import {saveAs} from 'file-saver';
 
 import {WebMscoreLoader,WebMscoreSupported,LIB_WEBMSCORE_MAJOR} from "../loaders/webmscore.js"
 import {WdDataLoader} from "../loaders/wd_data.js"
+import {PdfLoader} from "../loaders/pdf.js"
 
 import ScorePlayback from "./ScorePlayback.vue";
 import PagesDisplay from "./PagesDisplay.vue";
@@ -49,19 +53,23 @@ import PagesDisplay from "./PagesDisplay.vue";
  * Spec:
  * - `tracks`: array { name, src, type, soundfont } of the tracks to display,
  *     these can also be passed via <score-track> DOM elements
- * - `type`: mscz | mscx | musicxml | midi | wd-data
+ * - `type`: mscz | mscx | musicxml | midi | wd-data | pdf
  * - If type is wd-data, `src` should point to a directory, with or without a trailing slash.
  * - The directory should include:
  *   - `meta.metajson`, the score metadata.
  *   - `graphic-%d.svg`, the SVG of all pages.
  *   - Optionally `measures.mpos`, the measure position references.
- * - If type is mscz, `src` points to the score file
+ * - If type is mscz or pdf, `src` points to the score file
+ * - Other sources to display the score from can be added with <score-view src type> elements.
+ *   If there are several, the user can switch between them. The first one is displayed by default,
+ *   after `src` if it is a view: always for pdf & wd-data, for mscz only with `isView` (or if there is no <score-view>)
  */
 export default {
     props: {
         src: { type: String, required: true },
         tracks: { type: Array, required: false, default: () => [] },
-        type: { type: String, required: false, default: "wd-data" }
+        type: { type: String, required: false, default: "wd-data" },
+        isView: { type: Boolean, required: false, default: false }
     },
     setup(props) {
         const tracks_ref = Vue.ref(props.tracks || []);
@@ -70,6 +78,10 @@ export default {
         Vue.onMounted(() => {
             const host = Vue.getCurrentInstance().proxy.$el.parentNode;
             requestAnimationFrame(() => { // DOM is not ready yet
+                extraViews.value = Array.from(host.getElementsByTagName("score-view")).map(el => newView(
+                    el.textContent.trim(), el.getAttribute('src'), el.getAttribute('type') ?? "pdf"
+                ))
+
                 if (!props.tracks.length) {
                     const trackElements = host.getElementsByTagName("score-track");
                     const trackItems = Array.from(trackElements).map(el => ({
@@ -108,21 +120,31 @@ export default {
 
         const refMain = Vue.ref(null)
 
-        const scoreSrc = Vue.ref('')
-        const loadToken = Vue.ref(null)
+        // The pages can be displayed from several views: `src` itself, and the <score-view> elements.
+        const mainView = Vue.shallowRef(null)
+        const extraViews = Vue.shallowRef(null)  // null until the <score-view> elements are read
+        const viewIndex = Vue.ref(0)
 
-        const scoreMeta = Vue.ref(null)
+        const views = Vue.computed(() => {
+            if (extraViews.value == null) return []
+
+            // `src` is only used for the audio and the exports if it is a mscz and another view is available
+            const mainIsView = props.isView || !extraViews.value.length || !WebMscoreSupported.includes(props.type)
+            return mainIsView ? [mainView.value, ...extraViews.value] : extraViews.value
+        })
+        const view = Vue.computed(() => views.value[viewIndex.value] ?? views.value[0])
+
+        const noPositions = {elements: [], events: []}
+        const scoreMeta = Vue.computed(() => view.value?.meta ?? null)
         const loaded = Vue.computed(() => scoreMeta.value != null)
-
-        const errorMessage = Vue.ref("Reload the page to try again.")
-        const errored = Vue.ref(false)
-        const graphics = Vue.ref(null)
-
-        const positions = Vue.ref({elements: [], events: []});
+        const errorMessage = Vue.computed(() => view.value?.errorMessage ?? "Reload the page to try again.")
+        const errored = Vue.computed(() => view.value?.errored ?? false)
+        const graphics = Vue.computed(() => view.value?.graphics ?? null)
+        const positions = Vue.computed(() => view.value?.positions ?? noPositions)
 
         const audioTime = Vue.ref(null)  // current audio time
         const refAudioApi = Vue.reactive({ value: null })
-        const loader = Vue.ref(null);
+        const loader = Vue.computed(() => mainView.value.loader);  // for the audio and the exports
 
         function selectTimes(times) {
             if (!refAudioApi.value || times.length == 0) {
@@ -161,67 +183,79 @@ export default {
             }
         }
 
-        // Load score data
-        Vue.watchEffect(() => {
-            if(scoreSrc.value == props.src) {
-                return
-            }
-            scoreSrc.value = props.src
+        function newView(name, src, type) {
+            return Vue.shallowReactive({
+                name: name || (type == "pdf" ? "PDF" : "Score"),
+                src, type,
+                loader: null, started: false,
+                meta: null, graphics: null, positions: noPositions,
+                errored: false, errorMessage: "Reload the page to try again."
+            })
+        }
 
-            // Clear state
-            scoreMeta.value = null
-            loadToken.value = Math.random()
-            graphics.value = null
-            positions.value = {elements: [], events: []};
-            errored.value = false
-
-            let token = loadToken.value; // Use that to see if the data is still relevant once received
-
-            if (WebMscoreSupported.includes(props.type)) {
-                loader.value = new WebMscoreLoader(scoreSrc.value, props.type);
-                errorMessage.value = `Please note that scores written with MuseScore > v${LIB_WEBMSCORE_MAJOR} are not supported.`
-            } else if (props.type == "wd-data") {
-                loader.value = new WdDataLoader(scoreSrc.value);
+        function createLoader(view) {
+            if (WebMscoreSupported.includes(view.type)) {
+                view.loader = new WebMscoreLoader(view.src, view.type);
+                view.errorMessage = `Please note that scores written with MuseScore > v${LIB_WEBMSCORE_MAJOR} are not supported.`
+            } else if (view.type == "wd-data") {
+                view.loader = new WdDataLoader(view.src);
+            } else if (view.type == "pdf") {
+                view.loader = new PdfLoader(view.src);
             } else {
-                console.error(`Unknown source type  "${props.type}".`);
-                errored.value = true;
+                console.error(`Unknown source type  "${view.type}".`);
+                view.errored = true;
             }
+        }
+
+        // Create the loader for `src` (it may be needed for the audio even if it is not displayed)
+        Vue.watchEffect(() => {
+            mainView.value = newView(null, props.src, props.type)
+            createLoader(mainView.value)
+        })
+
+        // Load the pages of a view when it is displayed for the first time
+        Vue.watch(view, (view) => {
+            if (view && !view.started) loadView(view)
+        }, { immediate: true })
+
+        function loadView(view) {
+            view.started = true;
+            if (!view.loader) createLoader(view);
+            if (!view.loader) return;
 
             // Initiate metadata load
-            loader.value.loadMetaData().then((meta) => {
-            if (token != loadToken.value) return;
+            view.loader.loadMetaData().then((meta) => {
             if (!('pages' in meta) && ('metadata' in meta)) {
-                scoreMeta.value = meta.metadata
+                view.meta = meta.metadata
             } else {
-                scoreMeta.value = meta
+                view.meta = meta
             }
             // Load pages
-            graphics.value = Array(scoreMeta.value.pages).fill(null); // It is bad that we don't get images as soon as they are loaded
-            loader.value.loadGraphics(scoreMeta.value.pages)
+            view.graphics = Array(view.meta.pages).fill(null); // It is bad that we don't get images as soon as they are loaded
+            view.loader.loadGraphics(view.meta.pages)
             .then((gr) => {
-                if (token != loadToken.value) return;
-                graphics.value = gr;
+                view.graphics = gr;
 
                 // If used in an IFrame, let the parent window know that the score is visible
                 if (window.parent)
                     window.parent.postMessage("scoreDisplay:ready", "*");
             })
-            .catch((_err) => {console.warn('loading images failed.', _err); errored.value = true });
+            .catch((_err) => {console.warn('loading images failed.', _err); view.errored = true });
             }).catch((_err) => {
                 console.warn('metadata load failed.', _err);
-                errored.value = true;
+                view.errored = true;
             });
 
             // Initiate positions load
-            loader.value.loadPos(false).then((positions_json) => {
-            if (token != loadToken.value) return;
-                positions.value = positions_json;
+            view.loader.loadPos(false).then((positions_json) => {
+                view.positions = positions_json;
             }).catch((_err) => console.warn('events positions load failed.', _err));
-        })
+        }
 
         Vue.onUnmounted(() => {
-            if (loader.value)
-                loader.value.destroy()
+            for (const view of [mainView.value, ...(extraViews.value ?? [])])
+                if (view.loader)
+                    view.loader.destroy()
             }
         )
 
@@ -237,7 +271,7 @@ export default {
 
                 const exportFormat = dataLoc.split(":")[1];
                 const data = await loader.value.exportAs(exportFormat);
-                filename = `${scoreMeta.value.title}.${exportFormat}`;
+                filename = `${mainView.value.meta?.title ?? "score"}.${exportFormat}`;
                 dataLoc = new Blob([data]);
             } else {
                 filename = element.href.substr(element.href.lastIndexOf("/")+1);
@@ -256,7 +290,7 @@ export default {
         return {
             refMain, scoreMeta, loaded, errored, graphics, positions, audioTime,
             refAudioApi, selectTimes, playPause, addProgress, refPagesApi, handleExactKey, tracks_ref, downloads,
-            errorMessage, download
+            errorMessage, download, views, viewIndex
         }
     },
     components: { PagesDisplay, ScorePlayback },

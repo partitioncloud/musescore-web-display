@@ -4,7 +4,7 @@ WEBMSCORE_SOURCE  := https://github.com/partitioncloud/webmscore/releases/downlo
 WEBMSCORE         := ./webmscore$(WEBMSCORE_VERSION)
 ROLLDOWN          := node_modules/.bin/rolldown --config rolldown.config.mjs --intro="const LIB_WEBMSCORE_VERSION='$(WEBMSCORE_VERSION)';"
 
-target: target/soundfonts/FluidR3Mono_GM.sf3 target/score-display.rolldown.js $(WEBMSCORE)
+target: target/soundfonts/FluidR3Mono_GM.sf3 target/score-display.rolldown.js target/pdfjs $(WEBMSCORE)
 	mkdir -p target/soundfonts
 	cp ./score-display/score-display.css target
 	cp $(WEBMSCORE)/ target/ -r
@@ -31,6 +31,10 @@ target/score-display.rolldown.no-mm.js: node_modules $(JS_SOURCES) patches/midip
 target/soundfonts/FluidR3Mono_GM.sf3:
 	mkdir -p target/soundfonts
 	curl -S https://cdn.jsdelivr.net/gh/musescore/MuseScore@2.1/share/sound/FluidR3Mono_GM.sf3 > target/soundfonts/FluidR3Mono_GM.sf3
+
+target/pdfjs: node_modules
+	mkdir -p target/pdfjs
+	cp node_modules/pdfjs-dist/legacy/build/pdf.min.mjs node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs target/pdfjs/
 
 target/style/line-awesome: node_modules
 	mkdir -p target/style/line-awesome/fonts target/style/line-awesome/css

@@ -17,10 +17,15 @@ class TrackElement extends HTMLElement {
   /* Stores `src` and `name` data for its score-display parent */
   connectedCallback() { this.style.display = 'none'; }
 }
+class ViewElement extends HTMLElement {
+  /* Stores `src`, `type` and `name` data for its score-display parent */
+  connectedCallback() { this.style.display = 'none'; }
+}
 class DownloadElement extends HTMLElement { // We might want to use a Vue component ?
   /* Stores `href` and `name` data for its score-display parent */
   connectedCallback() { this.style.display = 'none'; }
 }
 customElements.define('score-track', TrackElement);
+customElements.define('score-view', ViewElement);
 customElements.define('score-download', DownloadElement);
 customElements.define('score-display', Vue.defineCustomElement(ScoreDisplay, {shadowRoot: false}));
