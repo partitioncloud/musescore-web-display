@@ -212,7 +212,9 @@ export default {
             }
         }
 
-        useFrameEffect(() => { // Need this to recompute every frame, as audio.value.playing/seek are not reactive
+        // Need this to recompute regularly, as audio.value.playing/seek are not reactive.
+        // Every frame while playing, much less often otherwise.
+        const refresh = useFrameEffect(() => {
             reportCurrent()
 
             if(!audio.value) return
@@ -223,7 +225,7 @@ export default {
             duration.value = audio.value.duration();
             if(audio.value.duration() != 0)
                 progressRatio.value = audio.value.seek() / audio.value.duration();
-        })
+        }, () => isPlaying.value)
 
         Vue.onUnmounted(() => {
             setPopupCloseListeners(false);
@@ -244,12 +246,14 @@ export default {
             } else {
                 audio.value.pause()
             }
+            refresh()
         }
         function stop() {
             if (!audio.value) return
             audio.value.pause()
             audio.value.seek(0)
             ctx.emit('timeChange', null)
+            refresh()
         }
         function setProgress(time) {
             if (!audio.value) return
@@ -257,6 +261,7 @@ export default {
             if (time < 0) time = 0
             audio.value.seek(time)
             ctx.emit('timeChange', time)
+            refresh()
         }
         function getProgress() {
             if (!audio.value) return -1

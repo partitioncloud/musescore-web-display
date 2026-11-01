@@ -74,7 +74,6 @@
 <script>
 import * as Vue from "vue";
 
-import {useFrameEffect} from "../utils.js";
 
 import ExportPopup from "./ExportPopup.vue";
 import Page from "./Page.vue";
@@ -116,21 +115,39 @@ export default {
         }
         const innerRef = Vue.ref(null)
 
+        const displaySize = Vue.ref(null)  // Reactive, to lay the pages out again when the display is resized
+        let resizeObserver = null
+        Vue.onMounted(() => {
+            resizeObserver = new ResizeObserver(() => {
+                displaySize.value = { width: ref.value.clientWidth, height: ref.value.clientHeight }
+            })
+            resizeObserver.observe(ref.value)
+        })
+        Vue.onUnmounted(() => resizeObserver.disconnect())
+
         // Normal mode: the pages are as high as the display (see CSS).
         // Zoomed: the pages are as wide as the display, so they are higher than it
-        useFrameEffect(function () {
-            if (!ref.value || !innerRef.value || !props.pageFormat) return
+        // Either way, the width of the pages follows from their height.
+        Vue.watchEffect(function () {
+            if (!ref.value || !innerRef.value || !props.pageFormat || !displaySize.value) return
             let pageHeight = ''
             if (zoomed.value) {
                 const style = getComputedStyle(innerRef.value)
                 const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
-                const pageWidth = ref.value.clientWidth - padding
+                const pageWidth = displaySize.value.width - padding
                 pageHeight = pageWidth * props.pageFormat.height / props.pageFormat.width + 2 + 'px'
             }
             if (innerRef.value.style.getPropertyValue('--slcwd-page-height') != pageHeight) {
                 innerRef.value.style.setProperty('--slcwd-page-height', pageHeight)
             }
-        })
+
+            const page = innerRef.value.querySelector('.slcwd-page')
+            if (!page) return
+            const pageWidth = (page.clientHeight - 2) * props.pageFormat.width / props.pageFormat.height + 'px'
+            if (innerRef.value.style.getPropertyValue('--slcwd-page-width') != pageWidth) {
+                innerRef.value.style.setProperty('--slcwd-page-width', pageWidth)
+            }
+        }, { flush: 'post' })
 
         const highlighterIndex = { current: 0 }
         const highlighterElid = Vue.computed(() => {

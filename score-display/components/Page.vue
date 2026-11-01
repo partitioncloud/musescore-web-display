@@ -1,5 +1,5 @@
 <template>
-<div class="slcwd-page" ref="ref">
+<div class="slcwd-page">
     <div v-if="typeof page != 'string'" class="slcwd-page-placeholder">
         <div class="slcwd-page-placeholder-i">{{ id + 1 }}</div>
     </div>
@@ -29,8 +29,6 @@
 <script>
 import * as Vue from "vue";
 
-import {useFrameEffect} from "../utils.js";
-
 export default {
     emits: ['select'],
     props: {
@@ -41,17 +39,6 @@ export default {
         elementsDict: Object,
     },
     setup(props, ctx) {
-        const ref = Vue.ref(null)
-
-        useFrameEffect(() => {
-            if (!ref.value) return
-            const newWidth = (ref.value.clientHeight - 2) * props.pageFormat.width / props.pageFormat.height + 'px'
-            if (ref.value.style.width != newWidth) {
-                ref.value.style.width = newWidth
-                ref.value.style.fontSize = newWidth
-            }
-        })
-
         const svgParsed = Vue.computed(() => {
             if (typeof props.page != 'string') {
                 return null
@@ -97,7 +84,7 @@ export default {
             ctx.emit('select', elid)
         }
 
-        return { ref, svgParsed, highlighterElement, clickableElements, selectElement }
+        return { svgParsed, highlighterElement, clickableElements, selectElement }
     },
 }
 </script>

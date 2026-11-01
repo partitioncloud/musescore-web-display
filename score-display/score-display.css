@@ -110,6 +110,9 @@
   flex-shrink: 0;
   /* Normal mode: as high as the container. Zoomed: --slcwd-page-height is set by PagesDisplay */
   height: var(--slcwd-page-height, calc(100% - 2px));
+  /* Set by PagesDisplay from the height, to keep the ratio of the page. The font size is the width of the page. */
+  width: var(--slcwd-page-width);
+  font-size: var(--slcwd-page-width);
   border: 1px solid #ccc;
   background: white;
   box-sizing: content-box;
