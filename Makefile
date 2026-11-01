@@ -1,5 +1,5 @@
 JS_SOURCES := $(shell find score-display -name '*.js' -o -name '*.vue') rolldown.config.mjs
-WEBMSCORE_VERSION := 4.7.5-1
+WEBMSCORE_VERSION := 4.7.5-2
 WEBMSCORE_SOURCE  := https://github.com/partitioncloud/webmscore/releases/download/webmscore-$(WEBMSCORE_VERSION)/webmscore4-$(WEBMSCORE_VERSION).tgz
 WEBMSCORE         := ./webmscore$(WEBMSCORE_VERSION)
 BUNDLES           := target/score-display.rolldown.js $(addprefix target/score-display.rolldown.,$(addsuffix .js,no-cdn no-mm no-mm+no-cdn))
