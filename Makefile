@@ -1,4 +1,4 @@
-JS_SOURCES := $(wildcard score-display/*.js score-display/**/*.js score-display/**/*.vue) rolldown.config.mjs
+JS_SOURCES := $(shell find score-display -name '*.js' -o -name '*.vue') rolldown.config.mjs
 WEBMSCORE_VERSION := 4.7.5-1
 WEBMSCORE_SOURCE  := https://github.com/partitioncloud/webmscore/releases/download/webmscore-$(WEBMSCORE_VERSION)/webmscore4-$(WEBMSCORE_VERSION).tgz
 WEBMSCORE         := ./webmscore$(WEBMSCORE_VERSION)
@@ -37,8 +37,9 @@ $(WEBMSCORE):
 	mv ./package $(WEBMSCORE)
 	rm ./webmscore4.tgz
 
-node_modules:
+node_modules: package-lock.json
 	npm ci
+	touch node_modules
 
 ### GitHub Pages ###
 pages: target target/style/line-awesome pages/html pages/style
