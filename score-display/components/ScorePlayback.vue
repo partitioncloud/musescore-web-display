@@ -3,6 +3,7 @@
     <button
       @click="playPause"
       :disabled="!loaded"
+      :aria-label="isPlaying ? 'Pause' : 'Play'"
       class="slcwd-button slcwd-playback-button slcwd-pause"
     >
         <i :class="['las', isPlaying ? 'la-pause' : 'la-play']"></i>
@@ -11,6 +12,7 @@
       @wheel.prevent="addProgress($event.wheelDelta / 120)"
       @click="stop"
       :disabled="!loaded"
+      aria-label="Stop"
       class="slcwd-button slcwd-playback-button slcwd-stop"
     >
         <i class="las la-stop"></i>
@@ -37,7 +39,7 @@
         >
             {{ currentTrack.name }} <i class="las la-angle-up"></i>
         </button>
-        <div v-if="showTrackMenu" class="slcwd-track-menu" role="listbox">
+        <div v-if="showTrackMenu" class="slcwd-track-menu" role="listbox" aria-label="Tracks">
             <button
               v-for="(track, index) in tracks"
               :key="index"

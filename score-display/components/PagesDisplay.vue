@@ -35,6 +35,7 @@
         <button
           @click="toggleAutoScroll"
           :selected="enableAutoScroll ? '' : null"
+          :aria-pressed="enableAutoScroll"
           class="slcwd-button"
         >
             <i class="las la-arrows-alt-h"></i> <span class="label">Auto-<span style="text-decoration:underline">s</span>croll</span>
@@ -42,6 +43,7 @@
         <button
           @click="toggleZoomed"
           :selected="zoomed ? '' : null"
+          :aria-pressed="zoomed"
           class="slcwd-button"
         >
             <i class="las la-search-plus"></i> <span class="label"><span style="text-decoration:underline">Z</span>oom</span>
