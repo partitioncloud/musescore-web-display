@@ -43,6 +43,7 @@ import {saveAs} from 'file-saver';
 import {WebMscoreLoader,WebMscoreSupported,LIB_WEBMSCORE_MAJOR} from "../loaders/webmscore.js"
 import {WdDataLoader} from "../loaders/wd_data.js"
 import {PdfLoader} from "../loaders/pdf.js"
+import {FetchError} from "../fetch.js"
 
 import ScorePlayback from "./ScorePlayback.vue";
 import PagesDisplay from "./PagesDisplay.vue";
@@ -218,6 +219,12 @@ export default {
             if (view && !view.started) loadView(view)
         }, { immediate: true })
 
+        function fail(view, message, error) {
+            console.warn(message, error);
+            view.errored = true;
+            if (error instanceof FetchError) view.errorMessage = error.message  // Not a problem with the file itself
+        }
+
         function loadView(view) {
             view.started = true;
             if (!view.loader) createLoader(view);
@@ -240,11 +247,8 @@ export default {
                 if (window.parent)
                     window.parent.postMessage("scoreDisplay:ready", "*");
             })
-            .catch((_err) => {console.warn('loading images failed.', _err); view.errored = true });
-            }).catch((_err) => {
-                console.warn('metadata load failed.', _err);
-                view.errored = true;
-            });
+            .catch((err) => fail(view, 'loading images failed.', err));
+            }).catch((err) => fail(view, 'metadata load failed.', err));
 
             // Initiate positions load
             view.loader.loadPos(false).then((positions_json) => {

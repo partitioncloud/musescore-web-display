@@ -1,3 +1,4 @@
+import {fetchOk} from "../fetch.js";
 
 // Load data from an .mscz.wd url
 export class WdDataLoader {
@@ -7,7 +8,7 @@ export class WdDataLoader {
   }
 
   async loadMetaData() {
-    const response = await fetch(this.src + '/meta.metajson');
+    const response = await fetchOk(this.src + '/meta.metajson');
     return await response.json();
   }
 
@@ -15,7 +16,7 @@ export class WdDataLoader {
   async loadPos(savePositions) {
     if (savePositions) { console.warn("Attempting to load positions with savePositions=true for a wd-data score")}
 
-    const response = await fetch(this.src + '/measures.mpos');
+    const response = await fetchOk(this.src + '/measures.mpos');
     const mposXml = new DOMParser().parseFromString(await response.text() ?? '<none />', 'application/xml'); // What happens if not found ?
 
     const event_items = mposXml.querySelectorAll('event')
@@ -55,7 +56,7 @@ export class WdDataLoader {
 
   async _loadPage(pageId) {
     const url = this.src + `/graphic-${pageId+1}.svg`;
-    const response = await fetch(url);
+    const response = await fetchOk(url);
     return await response.text();
   }
 

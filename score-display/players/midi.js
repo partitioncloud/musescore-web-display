@@ -1,5 +1,6 @@
 import * as mm from "@magenta/music";
 import {DEFAULT_SOUNDFONT} from "../config.js";
+import {fetchOk} from "../fetch.js";
 
 /** Returns a promise that fulfills once magenta and Tone.js are loaded */
 function ensure_magenta() {
@@ -32,7 +33,7 @@ export class MidiPlayer {
   }
 
   load_data(onload, onend) {
-    fetch(this.src)
+    fetchOk(this.src)
     .then((response) => response.blob())
     .then(mm.blobToNoteSequence)
     .then((s) => {

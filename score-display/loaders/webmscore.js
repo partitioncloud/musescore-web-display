@@ -6,6 +6,8 @@
 // - supports MuseScore v4.3.2, see PR#1
 // From https://github.com/partitioncloud/webmscore:
 // - supports MuseScore v4.7.5
+import {fetchOk} from "../fetch.js";
+
 const LIB_WEBMSCORE = "../webmscore/webmscore.mjs";
 // LIB_WEBMSCORE_VERSION is defined by rolldown in the Makefile
 export const LIB_WEBMSCORE_MAJOR = (
@@ -53,7 +55,7 @@ export class WebMscoreLoader {
   async load_score() {
     await ensure_webmscore();
 
-    return fetch(this.src)
+    return fetchOk(this.src)
     .then((data) => data.arrayBuffer())
     .then((filedata) =>
       WebMscore.load(this.type, new Uint8Array(filedata))
@@ -125,7 +127,7 @@ export class WebMscoreLoader {
 
         const soundFontData = new Uint8Array(
           await (
-            await fetch('https://cdn.jsdelivr.net/gh/musescore/MuseScore@2.1/share/sound/FluidR3Mono_GM.sf3')
+            await fetchOk('https://cdn.jsdelivr.net/gh/musescore/MuseScore@2.1/share/sound/FluidR3Mono_GM.sf3')
             // TODO: get soundfont URL from options, compare this one with Magenta default one for default
           ).arrayBuffer()
         )

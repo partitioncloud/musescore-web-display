@@ -3,6 +3,8 @@
 // The legacy build is used so that older browsers are supported too.
 const LIB_PDFJS = "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/";
 
+import {fetchOk} from "../fetch.js";
+
 // Pages are rendered to images, at 3 times the PDF resolution (72 dpi)
 const RENDER_SCALE = 3;
 
@@ -30,7 +32,7 @@ export class PdfLoader {
 
   async load_pdf() {
     const lib = await ensure_pdfjs();
-    const response = await fetch(this.src);
+    const response = await fetchOk(this.src);
 
     return await lib.getDocument({
       data: new Uint8Array(await response.arrayBuffer())

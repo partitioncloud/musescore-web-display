@@ -1,7 +1,7 @@
 6848c6848
-< 				const soundFontData = new Uint8Array(await (await fetch("https://cdn.jsdelivr.net/gh/musescore/MuseScore@2.1/share/sound/FluidR3Mono_GM.sf3")).arrayBuffer());
+< 				const soundFontData = new Uint8Array(await (await fetchOk("https://cdn.jsdelivr.net/gh/musescore/MuseScore@2.1/share/sound/FluidR3Mono_GM.sf3")).arrayBuffer());
 ---
-> 				const soundFontData = new Uint8Array(await (await fetch(import.meta.url.substr(0, import.meta.url.lastIndexOf('/'))+'/soundfonts/FluidR3Mono_GM.sf3')).arrayBuffer());
+> 				const soundFontData = new Uint8Array(await (await fetchOk(import.meta.url.substr(0, import.meta.url.lastIndexOf('/'))+'/soundfonts/FluidR3Mono_GM.sf3')).arrayBuffer());
 6954c6954
 < 	LIB_PDFJS = "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/";
 ---
