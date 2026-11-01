@@ -4,7 +4,7 @@ import {fetchOk} from "../fetch.js";
 
 /** Returns a promise that fulfills once magenta and Tone.js are loaded */
 function ensure_magenta() {
-  if (typeof mm !== 'undefined') return Promise.resolve();
+  if (mm.SoundFontPlayer) return Promise.resolve();
   console.error("Can't load a MIDI track, not bundled with Magenta Music.");
   return Promise.reject();
 }

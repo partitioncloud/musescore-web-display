@@ -1,9 +1,7 @@
 // Load a PDF file with pdf.js (https://mozilla.github.io/pdf.js/).
 // Like webmscore, it is only loaded when needed.
-// The legacy build is used so that older browsers are supported too.
-const LIB_PDFJS = "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/";
-
 import {fetchOk} from "../fetch.js";
+import {PDFJS_DIRECTORY} from "../config.js";
 
 // Pages are rendered to images, at 3 times the PDF resolution (72 dpi)
 const RENDER_SCALE = 3;
@@ -12,8 +10,8 @@ const RENDER_SCALE = 3;
 let pdfjs;
 async function ensure_pdfjs() {
   if (pdfjs === undefined) {
-    pdfjs = import(LIB_PDFJS + "pdf.min.mjs").then((module) => {
-      module.GlobalWorkerOptions.workerSrc = LIB_PDFJS + "pdf.worker.min.mjs";
+    pdfjs = import(PDFJS_DIRECTORY + "pdf.min.mjs").then((module) => {
+      module.GlobalWorkerOptions.workerSrc = PDFJS_DIRECTORY + "pdf.worker.min.mjs";
       return module;
     });
   }

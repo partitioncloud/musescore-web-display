@@ -7,6 +7,7 @@
 // From https://github.com/partitioncloud/webmscore:
 // - supports MuseScore v4.7.5
 import {fetchOk} from "../fetch.js";
+import {WEBMSCORE_SOUNDFONT} from "../config.js";
 
 const LIB_WEBMSCORE = "../webmscore/webmscore.mjs";
 // LIB_WEBMSCORE_VERSION is defined by rolldown in the Makefile
@@ -127,7 +128,7 @@ export class WebMscoreLoader {
 
         const soundFontData = new Uint8Array(
           await (
-            await fetchOk('https://cdn.jsdelivr.net/gh/musescore/MuseScore@2.1/share/sound/FluidR3Mono_GM.sf3')
+            await fetchOk(WEBMSCORE_SOUNDFONT)
             // TODO: get soundfont URL from options, compare this one with Magenta default one for default
           ).arrayBuffer()
         )
