@@ -1,5 +1,4 @@
 import {WebMscoreLoader} from "../loaders/webmscore.js";
-import {DEFAULT_SOUNDFONT} from "../config.js";
 
 export class WebMscorePlayer {
   /**
@@ -9,11 +8,13 @@ export class WebMscorePlayer {
    * - `onend` callback to execute once the file is over
    * - `excerpt`: index of the instrument to use (-1 being "all")
    * - Optional `mscz` object (will replace `src`)
-   * - Optional `soundfont` url of the soundfont to use
+   * - Optional `extraFonts`: array of urls of fonts to load with the score
+   * - Optional `soundfont` url (sf2/sf3) of the soundfont to use
    */
   constructor(options = {}) {
     this.onend = options.onend;
     this.excerpt = options.excerpt;
+    this.soundfont = options.soundfont;
     this.score_type = options.type;
 
     this._duration = 0; // To be loaded
@@ -38,7 +39,7 @@ export class WebMscorePlayer {
     this.mscz = options.mscz || new WebMscoreLoader(
       options.src.at(0),
       this.score_type,
-      {soundfont: options.soundfont || DEFAULT_SOUNDFONT}
+      {extraFonts: options.extraFonts, soundfont: this.soundfont}
     );
     this.load_data(options.onload);
     this.destroy = async () => {
@@ -51,7 +52,7 @@ export class WebMscorePlayer {
   async load_data(onload) {
     let score = await this.mscz.score;
     let metadata = await score.metadata();
-    await this.mscz.setSoundFont();
+    await this.mscz.setSoundFont(this.soundfont);
 
     await score.generateExcerpts();
     // TODO: the score may be used to generate graphics etc in the meantime, want to wait for this to be ready

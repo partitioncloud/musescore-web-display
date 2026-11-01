@@ -64,13 +64,16 @@ import PagesDisplay from "./PagesDisplay.vue";
  * - Other sources to display the score from can be added with <score-view src type> elements.
  *   If there are several, the user can switch between them. The first one is displayed by default,
  *   after `src` if it is a view: always for pdf & wd-data, for mscz only with `isView` (or if there is no <score-view>)
+ * - For mscz, you can add the `extra-fonts` parameter: an array of font urls, or a JSON string of it
+ *   when used as an HTML attribute. It can also be set on <score-view> elements.
  */
 export default {
     props: {
         src: { type: String, required: true },
         tracks: { type: Array, required: false, default: () => [] },
         type: { type: String, required: false, default: "wd-data" },
-        isView: { type: Boolean, required: false, default: false }
+        isView: { type: Boolean, required: false, default: false },
+        extraFonts: { type: [Array, String], required: false, default: () => [] },
     },
     setup(props) {
         const tracks_ref = Vue.ref(props.tracks || []);
@@ -80,7 +83,8 @@ export default {
             const host = Vue.getCurrentInstance().proxy.$el.parentNode;
             requestAnimationFrame(() => { // DOM is not ready yet
                 extraViews.value = Array.from(host.getElementsByTagName("score-view")).map(el => newView(
-                    el.textContent.trim(), el.getAttribute('src'), el.getAttribute('type') ?? "pdf"
+                    el.textContent.trim(), el.getAttribute('src'), el.getAttribute('type') ?? "pdf",
+                    parseFonts(el.getAttribute('extra-fonts'))
                 ))
 
                 if (!props.tracks.length) {
@@ -184,10 +188,16 @@ export default {
             }
         }
 
-        function newView(name, src, type) {
+        /** Font urls, from an array or from a JSON string of it (HTML attribute) */
+        function parseFonts(value) {
+            if (!value) return []
+            return typeof value == "string" ? JSON.parse(value) : value
+        }
+
+        function newView(name, src, type, extraFonts) {
             return Vue.shallowReactive({
                 name: name || (type == "pdf" ? "PDF" : "Score"),
-                src, type,
+                src, type, extraFonts,
                 loader: null, started: false,
                 meta: null, graphics: null, positions: noPositions,
                 errored: false, errorMessage: "Reload the page to try again."
@@ -196,7 +206,7 @@ export default {
 
         function createLoader(view) {
             if (WebMscoreSupported.includes(view.type)) {
-                view.loader = new WebMscoreLoader(view.src, view.type);
+                view.loader = new WebMscoreLoader(view.src, view.type, {extraFonts: view.extraFonts});
                 view.errorMessage = `Please note that scores written with MuseScore > v${LIB_WEBMSCORE_MAJOR} are not supported.`
             } else if (view.type == "wd-data") {
                 view.loader = new WdDataLoader(view.src);
@@ -210,7 +220,7 @@ export default {
 
         // Create the loader for `src` (it may be needed for the audio even if it is not displayed)
         Vue.watchEffect(() => {
-            mainView.value = newView(null, props.src, props.type)
+            mainView.value = newView(null, props.src, props.type, parseFonts(props.extraFonts))
             createLoader(mainView.value)
         })
 

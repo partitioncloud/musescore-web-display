@@ -84,6 +84,12 @@ Your component will look like that:
 
 Unfortunately, this requires an up-to-date version of webmscore, and recent versions of MuseScore aren't always supported (currently, supports v4.7.5).
 
+If the score contains characters that aren't in the bundled fonts (e.g. CJK), [webmscore needs extra fonts](https://github.com/partitioncloud/webmscore#load-extra-fonts). Give their urls with the `extra-fonts` attribute, as a JSON array (the `extraFonts` property takes an array):
+```html
+<score-display src="/your/score/data/path.mscz" type="mscz" extra-fonts='["/fonts/NotoSansSC-Regular.otf"]'>
+```
+The same attribute can be set on a `<score-view>` of a `mscz` type.
+
 #### Serving a PDF file
 
 Your component will look like that:
@@ -143,6 +149,7 @@ In `<path to library>`, you will need to serve:
 Those are obtainable through `make webmscore target/style/line-awesome target/soundfonts/FluidR3Mono_GM.sf3 target/pdfjs`
 
 Note that MIDI tracks use a default soundfont hosted on a CDN, unless you give them a `sound-font` attribute (or use the `no-mm` variant, that does not support MIDI tracks).
+`mscz/synth` tracks accept the same attribute, with the url of a sf2/sf3 file: they default to FluidR3Mono.
 
 2. A container element for your score showcase (needs to be after the `<script>` tag)
 

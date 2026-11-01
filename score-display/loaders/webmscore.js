@@ -44,11 +44,24 @@ async function ensure_webmscore() {
 }
 
 
+async function fetchBytes(url) {
+  const response = await fetchOk(url);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+
 // Load data from a MuseScore supported file, with webmscore
 export class WebMscoreLoader {
-  constructor (src, type) {
+  /**
+   * options:
+   * - `extraFonts` is an array of urls of fonts, see https://github.com/partitioncloud/webmscore#load-extra-fonts
+   * - `soundfont` is the url of a sf2/sf3 file to synthesize the audio with, defaults to WEBMSCORE_SOUNDFONT
+   */
+  constructor (src, type, options = {}) {
     this.src = src;
     this.type = type;
+    this.extraFonts = options.extraFonts ?? [];
+    this.soundfont = options.soundfont ?? WEBMSCORE_SOUNDFONT;
 
     this.score = this.load_score();
   }
@@ -56,10 +69,11 @@ export class WebMscoreLoader {
   async load_score() {
     await ensure_webmscore();
 
-    return fetchOk(this.src)
-    .then((data) => data.arrayBuffer())
+    const fonts = Promise.all(this.extraFonts.map(fetchBytes));
+
+    return fetchBytes(this.src)
     .then((filedata) =>
-      WebMscore.load(this.type, new Uint8Array(filedata))
+      WebMscore.load(this.type, filedata, fonts)
     )
   }
 
@@ -121,19 +135,22 @@ export class WebMscoreLoader {
     return graphics;
   }
 
-  async setSoundFont() {
-    if (typeof this.loadSoundfont == 'undefined')
+  /** Load the soundfont, `url` replaces the current one if given */
+  async setSoundFont(url) {
+    if (url) this.soundfont = url;
+
+    if (this.loadedSoundfont !== this.soundfont) {
+      const soundfont = this.soundfont;
+      this.loadedSoundfont = soundfont;
       this.loadSoundfont = (async () => {
         let score = await this.score;
 
         const soundFontData = new Uint8Array(
-          await (
-            await fetchOk(WEBMSCORE_SOUNDFONT)
-            // TODO: get soundfont URL from options, compare this one with Magenta default one for default
-          ).arrayBuffer()
+          await (await fetchOk(soundfont)).arrayBuffer()
         )
         await score.setSoundFont(soundFontData);
       })();
+    }
 
     await this.loadSoundfont;
   }
