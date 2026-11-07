@@ -32,7 +32,12 @@ export class WebMscorePlayer {
     this.BUFFER_QUEUE = [];
     this.BUFFER_WAIT_LENGTH = 64; //TODO something to think there
 
-    this.audioCtx = new (AudioContext || webkitAudioContext)({latencyHint: "interactive"});
+    // webmscore always synthesizes at 44.1kHz: the context must use the same rate
+    this.SAMPLE_RATE = 44100;
+    this.audioCtx = new (AudioContext || webkitAudioContext)({
+      latencyHint: "interactive",
+      sampleRate: this.SAMPLE_RATE,
+    });
     this.currentTime = 0;
     this.waitForProcessing = true; // waiting for the buffer queue to refill
 
