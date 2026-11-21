@@ -26,6 +26,7 @@ export class MidiPlayer {
     this.player = null;
     this.data = null;
     this.currentTime = 0;
+    this.released = false; // Set once release() was called, to ignore late callbacks
 
     ensure_magenta().then(() =>
       this.load_data(options.onload, options.onend)
@@ -44,7 +45,7 @@ export class MidiPlayer {
         undefined,
         undefined,{
           run: (note) => this.currentTime = note.startTime,
-          stop: onend
+          stop: () => this.released || onend?.()
       });
       this.player.loadSamples(this.seq)
       .then(onload);
@@ -75,6 +76,17 @@ export class MidiPlayer {
   pause() {
     if (!this.playing()) return console.warn("Player already paused");
     this.player.pause();
+  }
+
+  /**
+   * Fully stop playback, so that Tone.Transport (shared by all MIDI players)
+   * is free to be used by another player. A merely paused player keeps it busy.
+   */
+  release() {
+    this.released = true;
+    if (this.player && this.player.getPlayState() !== "stopped") {
+      this.player.stop();
+    }
   }
 
   duration() { return this.seq.totalTime; }

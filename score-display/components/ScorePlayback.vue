@@ -141,6 +141,7 @@ export default {
                     playing = true;
                 }
                 seek_val = old_audio.seek();
+                old_audio.release?.(); // Free Tone.Transport for the next MIDI player
             }
 
             const options = {
