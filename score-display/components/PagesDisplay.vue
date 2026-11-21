@@ -33,6 +33,7 @@
     </div>
     <div class="slcwd-button-group">
         <button
+          v-if="positions?.events?.length > 0"
           @click="toggleAutoScroll"
           :selected="enableAutoScroll ? '' : null"
           :aria-pressed="enableAutoScroll"
