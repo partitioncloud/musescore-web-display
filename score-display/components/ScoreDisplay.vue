@@ -110,6 +110,11 @@ export default {
                         if (!track.src && loader.value != null) {
                             track.mscz = loader.value; // Just give it the already built mscz loader
                         }
+                        if (track.src) {
+                            // The file format is given by the extension, defaults to mscz
+                            const ext = track.src.split(/[?#]/)[0].split(".").pop().toLowerCase();
+                            track.format = WebMscoreSupported.includes(ext) ? ext : "mscz";
+                        }
                         track.src = track.src ?? props.src;
                         return track;
                     })

@@ -171,7 +171,7 @@ export default {
                 case "mscz/synth":
                     options.mscz = currentTrack.value.mscz;
                     options.excerpt = currentTrack.value.excerpt;
-                    options.type = currentTrack.value.mscz ? props.type : "mscz"; // a track without the main loader has its own mscz file
+                    options.type = currentTrack.value.mscz ? props.type : (currentTrack.value.format ?? props.type); // a track without the main loader has its own file
                     Constructor = WebMscorePlayer;
                     break;
                 default:
